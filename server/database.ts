@@ -48,16 +48,16 @@ export const ProjectUpdate = mongoose.model('ProjectUpdate', projectUpdateSchema
 // Connect to MongoDB
 const connectDB = async () => {
   try {
-    // Use in-memory fallback for development if MongoDB is not available
-    const mongoUrl = process.env.MONGODB_URL || 'mongodb://127.0.0.1:27017/charlieverse';
+    const mongoUrl = process.env.MONGODB_URL || 'mongodb+srv://charlieverse:ZI4A4B9UMahekTXc@cluster0.0iqfe4u.mongodb.net/charlieverse';
     await mongoose.connect(mongoUrl, {
-      connectTimeoutMS: 5000,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
     });
-    console.log('MongoDB connected successfully');
+    console.log('MongoDB Atlas connected successfully');
+    return true;
   } catch (error) {
     console.warn('MongoDB connection failed, using fallback storage:', error.message);
-    // Don't exit process, let the app continue with fallback storage
+    return false;
   }
 };
 

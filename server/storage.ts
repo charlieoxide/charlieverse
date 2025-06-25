@@ -26,11 +26,22 @@ export class MongoStorage implements IStorage {
   private projectStorage = new Map<string, any>();
   private userIdCounter = 1;
   private projectIdCounter = 1;
+  private isMongoConnected = false;
+
+  constructor() {
+    // Check MongoDB connection status
+    setTimeout(() => {
+      this.isMongoConnected = mongoose.connection.readyState === 1;
+    }, 2000);
+  }
 
   // User operations
   async getUser(id: string) {
     try {
-      return await User.findById(id).select('-password');
+      if (mongoose.connection.readyState === 1) {
+        return await User.findById(id).select('-password');
+      }
+      return this.fallbackStorage.get(id);
     } catch (error) {
       return this.fallbackStorage.get(id);
     }
@@ -38,7 +49,14 @@ export class MongoStorage implements IStorage {
 
   async getUserByEmail(email: string) {
     try {
-      return await User.findOne({ email });
+      if (mongoose.connection.readyState === 1) {
+        return await User.findOne({ email });
+      }
+      const users = Array.from(this.fallbackStorage.values());
+      for (const user of users) {
+        if (user.email === email) return user;
+      }
+      return null;
     } catch (error) {
       const users = Array.from(this.fallbackStorage.values());
       for (const user of users) {
@@ -50,8 +68,18 @@ export class MongoStorage implements IStorage {
 
   async createUser(userData: any) {
     try {
-      const user = new User(userData);
-      return await user.save();
+      if (mongoose.connection.readyState === 1) {
+        const user = new User(userData);
+        return await user.save();
+      }
+      const user = {
+        _id: (this.userIdCounter++).toString(),
+        ...userData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      this.fallbackStorage.set(user._id, user);
+      return user;
     } catch (error) {
       const user = {
         _id: (this.userIdCounter++).toString(),
@@ -66,11 +94,21 @@ export class MongoStorage implements IStorage {
 
   async updateUser(id: string, updates: any) {
     try {
-      return await User.findByIdAndUpdate(
-        id, 
-        { ...updates, updatedAt: new Date() }, 
-        { new: true }
-      ).select('-password');
+      if (mongoose.connection.readyState === 1) {
+        return await User.findByIdAndUpdate(
+          id, 
+          { ...updates, updatedAt: new Date() }, 
+          { new: true }
+        ).select('-password');
+      }
+      const user = this.fallbackStorage.get(id);
+      if (user) {
+        const updated = { ...user, ...updates, updatedAt: new Date() };
+        this.fallbackStorage.set(id, updated);
+        const { password, ...userWithoutPassword } = updated;
+        return userWithoutPassword;
+      }
+      return null;
     } catch (error) {
       const user = this.fallbackStorage.get(id);
       if (user) {
@@ -85,7 +123,13 @@ export class MongoStorage implements IStorage {
 
   async getAllUsers() {
     try {
-      return await User.find().select('-password').sort({ createdAt: -1 });
+      if (mongoose.connection.readyState === 1) {
+        return await User.find().select('-password').sort({ createdAt: -1 });
+      }
+      return Array.from(this.fallbackStorage.values()).map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
     } catch (error) {
       return Array.from(this.fallbackStorage.values()).map(user => {
         const { password, ...userWithoutPassword } = user;

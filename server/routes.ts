@@ -32,11 +32,29 @@ const requireAdmin = (req: any, res: any, next: any) => {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Try to connect to MongoDB
-  await connectDB();
+  const mongoConnected = await connectDB();
   
   // Create admin user if it doesn't exist
-  const { createAdminUser } = await import('./seedAdmin');
-  setTimeout(() => createAdminUser(), 1000);
+  if (mongoConnected) {
+    const { createAdminUser } = await import('./seedAdmin');
+    setTimeout(() => createAdminUser(), 2000);
+  } else {
+    console.log('Using fallback storage - creating default admin user in memory');
+    setTimeout(async () => {
+      const bcrypt = await import('bcrypt');
+      const hashedPassword = await bcrypt.hash('admin123', 12);
+      await storage.createUser({
+        email: 'admin@charlieverse.com',
+        password: hashedPassword,
+        firstName: 'Admin',
+        lastName: 'User',
+        role: 'admin',
+        bio: 'System Administrator',
+        company: 'Charlieverse'
+      });
+      console.log('Fallback admin user created: admin@charlieverse.com / admin123');
+    }, 1000);
+  }
 
   // Authentication routes
   app.post("/api/auth/register", async (req, res) => {
