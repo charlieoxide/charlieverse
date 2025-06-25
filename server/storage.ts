@@ -1,213 +1,235 @@
-import { User, Project, ProjectUpdate } from './database';
-import mongoose from 'mongoose';
+import { db, useDatabase } from './database';
+import { users, projects, projectUpdates } from '../shared/schema';
+import { eq, desc } from 'drizzle-orm';
+import type { InsertUser, User, InsertProject, Project, ProjectUpdate, UpdateUser } from '../shared/schema';
 
 export interface IStorage {
   // User operations
-  getUser(id: string): Promise<any>;
-  getUserByEmail(email: string): Promise<any>;
-  createUser(user: any): Promise<any>;
-  updateUser(id: string, updates: any): Promise<any>;
-  getAllUsers(): Promise<any[]>;
+  getUser(id: number): Promise<User | null>;
+  getUserByEmail(email: string): Promise<User | null>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, updates: UpdateUser): Promise<User | null>;
+  getAllUsers(): Promise<User[]>;
   
   // Project operations
-  createProject(project: any): Promise<any>;
-  getProjectsByUser(userId: string): Promise<any[]>;
-  getAllProjects(): Promise<any[]>;
-  getProject(id: string): Promise<any>;
-  updateProjectStatus(id: string, status: string, updates?: any): Promise<any>;
+  createProject(project: InsertProject & { userId: number }): Promise<Project>;
+  getProjectsByUser(userId: number): Promise<Project[]>;
+  getAllProjects(): Promise<Project[]>;
+  getProject(id: number): Promise<Project | null>;
+  updateProjectStatus(id: number, status: string, updates?: any): Promise<Project | null>;
   
   // Project updates
-  addProjectUpdate(update: any): Promise<any>;
-  getProjectUpdates(projectId: string): Promise<any[]>;
+  addProjectUpdate(update: any): Promise<ProjectUpdate>;
+  getProjectUpdates(projectId: number): Promise<ProjectUpdate[]>;
 }
 
-export class MongoStorage implements IStorage {
-  private fallbackStorage = new Map<string, any>();
-  private projectStorage = new Map<string, any>();
+export class PostgreSQLStorage implements IStorage {
+  private fallbackUsers = new Map<number, User>();
+  private fallbackProjects = new Map<number, Project>();
+  private fallbackUpdates = new Map<number, ProjectUpdate>();
   private userIdCounter = 1;
   private projectIdCounter = 1;
-  private isMongoConnected = false;
-
-  constructor() {
-    // Check MongoDB connection status
-    setTimeout(() => {
-      this.isMongoConnected = mongoose.connection.readyState === 1;
-    }, 2000);
-  }
+  private updateIdCounter = 1;
 
   // User operations
-  async getUser(id: string) {
+  async getUser(id: number): Promise<User | null> {
+    if (!useDatabase) {
+      return this.fallbackUsers.get(id) || null;
+    }
+    
     try {
-      if (mongoose.connection.readyState === 1) {
-        return await User.findById(id).select('-password');
-      }
-      return this.fallbackStorage.get(id);
+      const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      return result[0] || null;
     } catch (error) {
-      return this.fallbackStorage.get(id);
+      console.error('Error getting user:', error);
+      return this.fallbackUsers.get(id) || null;
     }
   }
 
-  async getUserByEmail(email: string) {
-    try {
-      if (mongoose.connection.readyState === 1) {
-        return await User.findOne({ email });
-      }
-      const users = Array.from(this.fallbackStorage.values());
-      for (const user of users) {
-        if (user.email === email) return user;
-      }
-      return null;
-    } catch (error) {
-      const users = Array.from(this.fallbackStorage.values());
-      for (const user of users) {
+  async getUserByEmail(email: string): Promise<User | null> {
+    if (!useDatabase) {
+      for (const user of this.fallbackUsers.values()) {
         if (user.email === email) return user;
       }
       return null;
     }
-  }
-
-  async createUser(userData: any) {
+    
     try {
-      if (mongoose.connection.readyState === 1) {
-        const user = new User(userData);
-        return await user.save();
-      }
-      const user = {
-        _id: (this.userIdCounter++).toString(),
-        ...userData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      this.fallbackStorage.set(user._id, user);
-      return user;
+      const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      return result[0] || null;
     } catch (error) {
-      const user = {
-        _id: (this.userIdCounter++).toString(),
-        ...userData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      this.fallbackStorage.set(user._id, user);
-      return user;
-    }
-  }
-
-  async updateUser(id: string, updates: any) {
-    try {
-      if (mongoose.connection.readyState === 1) {
-        return await User.findByIdAndUpdate(
-          id, 
-          { ...updates, updatedAt: new Date() }, 
-          { new: true }
-        ).select('-password');
-      }
-      const user = this.fallbackStorage.get(id);
-      if (user) {
-        const updated = { ...user, ...updates, updatedAt: new Date() };
-        this.fallbackStorage.set(id, updated);
-        const { password, ...userWithoutPassword } = updated;
-        return userWithoutPassword;
-      }
-      return null;
-    } catch (error) {
-      const user = this.fallbackStorage.get(id);
-      if (user) {
-        const updated = { ...user, ...updates, updatedAt: new Date() };
-        this.fallbackStorage.set(id, updated);
-        const { password, ...userWithoutPassword } = updated;
-        return userWithoutPassword;
+      console.error('Error getting user by email:', error);
+      for (const user of this.fallbackUsers.values()) {
+        if (user.email === email) return user;
       }
       return null;
     }
   }
 
-  async getAllUsers() {
+  async createUser(userData: InsertUser): Promise<User> {
+    if (!useDatabase) {
+      const user: User = {
+        id: this.userIdCounter++,
+        ...userData,
+        role: userData.role || 'user',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      this.fallbackUsers.set(user.id, user);
+      return user;
+    }
+    
     try {
-      if (mongoose.connection.readyState === 1) {
-        return await User.find().select('-password').sort({ createdAt: -1 });
-      }
-      return Array.from(this.fallbackStorage.values()).map(user => {
-        const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword;
-      });
+      const result = await db.insert(users).values(userData).returning();
+      return result[0];
     } catch (error) {
-      return Array.from(this.fallbackStorage.values()).map(user => {
-        const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword;
-      });
+      console.error('Error creating user:', error);
+      const user: User = {
+        id: this.userIdCounter++,
+        ...userData,
+        role: userData.role || 'user',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      this.fallbackUsers.set(user.id, user);
+      return user;
+    }
+  }
+
+  async updateUser(id: number, updates: UpdateUser): Promise<User | null> {
+    if (!useDatabase) {
+      const user = this.fallbackUsers.get(id);
+      if (user) {
+        const updated = { ...user, ...updates, updatedAt: new Date() };
+        this.fallbackUsers.set(id, updated);
+        return updated;
+      }
+      return null;
+    }
+    
+    try {
+      const result = await db.update(users)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(users.id, id))
+        .returning();
+      return result[0] || null;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      const user = this.fallbackUsers.get(id);
+      if (user) {
+        const updated = { ...user, ...updates, updatedAt: new Date() };
+        this.fallbackUsers.set(id, updated);
+        return updated;
+      }
+      return null;
+    }
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    if (!useDatabase) {
+      return Array.from(this.fallbackUsers.values()).sort((a, b) => 
+        new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
+      );
+    }
+    
+    try {
+      return await db.select().from(users).orderBy(desc(users.createdAt));
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      return Array.from(this.fallbackUsers.values()).sort((a, b) => 
+        new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
+      );
     }
   }
 
   // Project operations
-  async createProject(projectData: any) {
-    try {
-      const project = new Project(projectData);
-      return await project.save();
-    } catch (error) {
-      const project = {
-        _id: (this.projectIdCounter++).toString(),
+  async createProject(projectData: InsertProject & { userId: number }): Promise<Project> {
+    if (!useDatabase) {
+      const project: Project = {
+        id: this.projectIdCounter++,
         ...projectData,
+        status: projectData.status || 'pending',
+        priority: projectData.priority || 'medium',
+        contactMethod: projectData.contactMethod || 'email',
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      this.projectStorage.set(project._id, project);
+      this.fallbackProjects.set(project.id, project);
+      return project;
+    }
+    
+    try {
+      const result = await db.insert(projects).values(projectData).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating project:', error);
+      const project: Project = {
+        id: this.projectIdCounter++,
+        ...projectData,
+        status: projectData.status || 'pending',
+        priority: projectData.priority || 'medium',
+        contactMethod: projectData.contactMethod || 'email',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      this.fallbackProjects.set(project.id, project);
       return project;
     }
   }
 
-  async getProjectsByUser(userId: string) {
-    try {
-      return await Project.find({ userId }).sort({ createdAt: -1 });
-    } catch (error) {
-      return Array.from(this.projectStorage.values())
+  async getProjectsByUser(userId: number): Promise<Project[]> {
+    if (!useDatabase) {
+      return Array.from(this.fallbackProjects.values())
         .filter(project => project.userId === userId)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+    }
+    
+    try {
+      return await db.select().from(projects)
+        .where(eq(projects.userId, userId))
+        .orderBy(desc(projects.createdAt));
+    } catch (error) {
+      console.error('Error getting projects by user:', error);
+      return Array.from(this.fallbackProjects.values())
+        .filter(project => project.userId === userId)
+        .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
     }
   }
 
-  async getAllProjects() {
+  async getAllProjects(): Promise<Project[]> {
+    if (!useDatabase) {
+      return Array.from(this.fallbackProjects.values())
+        .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+    }
+    
     try {
-      return await Project.find()
-        .populate('userId', '-password')
-        .sort({ createdAt: -1 });
+      return await db.select().from(projects).orderBy(desc(projects.createdAt));
     } catch (error) {
-      return Array.from(this.projectStorage.values()).map(project => ({
-        ...project,
-        userId: this.fallbackStorage.get(project.userId) || { _id: project.userId, email: 'unknown' }
-      }));
+      console.error('Error getting all projects:', error);
+      return Array.from(this.fallbackProjects.values())
+        .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
     }
   }
 
-  async getProject(id: string) {
+  async getProject(id: number): Promise<Project | null> {
+    if (!useDatabase) {
+      return this.fallbackProjects.get(id) || null;
+    }
+    
     try {
-      return await Project.findById(id).populate('userId', '-password');
+      const result = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
+      return result[0] || null;
     } catch (error) {
-      const project = this.projectStorage.get(id);
-      if (project) {
-        return {
-          ...project,
-          userId: this.fallbackStorage.get(project.userId) || { _id: project.userId, email: 'unknown' }
-        };
-      }
-      return null;
+      console.error('Error getting project:', error);
+      return this.fallbackProjects.get(id) || null;
     }
   }
 
-  async updateProjectStatus(id: string, status: string, updates: any = {}) {
-    try {
-      const updateData = {
-        status,
-        ...updates,
-        updatedAt: new Date(),
-      };
-      
-      if (status === 'completed') {
-        updateData.completedAt = new Date();
-      }
-      
-      return await Project.findByIdAndUpdate(id, updateData, { new: true });
-    } catch (error) {
-      const project = this.projectStorage.get(id);
+  async updateProjectStatus(id: number, status: string, updates: any = {}): Promise<Project | null> {
+    if (!useDatabase) {
+      const project = this.fallbackProjects.get(id);
       if (project) {
         const updated = {
           ...project,
@@ -216,7 +238,37 @@ export class MongoStorage implements IStorage {
           updatedAt: new Date(),
           ...(status === 'completed' && { completedAt: new Date() })
         };
-        this.projectStorage.set(id, updated);
+        this.fallbackProjects.set(id, updated);
+        return updated;
+      }
+      return null;
+    }
+    
+    try {
+      const updateData = {
+        status,
+        ...updates,
+        updatedAt: new Date(),
+        ...(status === 'completed' && { completedAt: new Date() })
+      };
+      
+      const result = await db.update(projects)
+        .set(updateData)
+        .where(eq(projects.id, id))
+        .returning();
+      return result[0] || null;
+    } catch (error) {
+      console.error('Error updating project status:', error);
+      const project = this.fallbackProjects.get(id);
+      if (project) {
+        const updated = {
+          ...project,
+          status,
+          ...updates,
+          updatedAt: new Date(),
+          ...(status === 'completed' && { completedAt: new Date() })
+        };
+        this.fallbackProjects.set(id, updated);
         return updated;
       }
       return null;
@@ -224,25 +276,50 @@ export class MongoStorage implements IStorage {
   }
 
   // Project updates
-  async addProjectUpdate(updateData: any) {
+  async addProjectUpdate(updateData: any): Promise<ProjectUpdate> {
+    if (!useDatabase) {
+      const update: ProjectUpdate = {
+        id: this.updateIdCounter++,
+        ...updateData,
+        createdAt: new Date()
+      };
+      this.fallbackUpdates.set(update.id, update);
+      return update;
+    }
+    
     try {
-      const update = new ProjectUpdate(updateData);
-      return await update.save();
+      const result = await db.insert(projectUpdates).values(updateData).returning();
+      return result[0];
     } catch (error) {
-      // Fallback for project updates
-      return { _id: Date.now().toString(), ...updateData, createdAt: new Date() };
+      console.error('Error adding project update:', error);
+      const update: ProjectUpdate = {
+        id: this.updateIdCounter++,
+        ...updateData,
+        createdAt: new Date()
+      };
+      this.fallbackUpdates.set(update.id, update);
+      return update;
     }
   }
 
-  async getProjectUpdates(projectId: string) {
+  async getProjectUpdates(projectId: number): Promise<ProjectUpdate[]> {
+    if (!useDatabase) {
+      return Array.from(this.fallbackUpdates.values())
+        .filter(update => update.projectId === projectId)
+        .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
+    }
+    
     try {
-      return await ProjectUpdate.find({ projectId })
-        .populate('userId', '-password')
-        .sort({ createdAt: -1 });
+      return await db.select().from(projectUpdates)
+        .where(eq(projectUpdates.projectId, projectId))
+        .orderBy(desc(projectUpdates.createdAt));
     } catch (error) {
-      return [];
+      console.error('Error getting project updates:', error);
+      return Array.from(this.fallbackUpdates.values())
+        .filter(update => update.projectId === projectId)
+        .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime());
     }
   }
 }
 
-export const storage = new MongoStorage();
+export const storage = new PostgreSQLStorage();

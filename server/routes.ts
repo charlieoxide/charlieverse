@@ -31,29 +31,15 @@ const requireAdmin = (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Try to connect to MongoDB
-  const mongoConnected = await connectDB();
+  // Try to connect to PostgreSQL
+  const dbConnected = await connectDB();
   
   // Create admin user if it doesn't exist
-  if (mongoConnected) {
+  if (dbConnected) {
     const { createAdminUser } = await import('./seedAdmin');
     setTimeout(() => createAdminUser(), 2000);
   } else {
-    console.log('Using fallback storage - creating default admin user in memory');
-    setTimeout(async () => {
-      const bcrypt = await import('bcrypt');
-      const hashedPassword = await bcrypt.hash('admin123', 12);
-      await storage.createUser({
-        email: 'admin@charlieverse.com',
-        password: hashedPassword,
-        firstName: 'Admin',
-        lastName: 'User',
-        role: 'admin',
-        bio: 'System Administrator',
-        company: 'Charlieverse'
-      });
-      console.log('Fallback admin user created: admin@charlieverse.com / admin123');
-    }, 1000);
+    console.log('Database connection failed - please check DATABASE_URL');
   }
 
   // Authentication routes
@@ -82,14 +68,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Set session
-      req.session.userId = user._id.toString();
+      req.session.userId = user.id.toString();
       req.session.userEmail = user.email;
       req.session.firstName = user.firstName;
       req.session.lastName = user.lastName;
       req.session.role = user.role;
       
       // Return user without password
-      const { password: _, ...userWithoutPassword } = user.toObject();
+      const { password: _, ...userWithoutPassword } = user;
       res.status(201).json({ user: userWithoutPassword });
     } catch (error) {
       console.error("Registration error:", error);
@@ -114,14 +100,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Set session
-      req.session.userId = user._id.toString();
+      req.session.userId = user.id.toString();
       req.session.userEmail = user.email;
       req.session.firstName = user.firstName;
       req.session.lastName = user.lastName;
       req.session.role = user.role;
       
       // Return user without password
-      const { password: _, ...userWithoutPassword } = user.toObject();
+      const { password: _, ...userWithoutPassword } = user;
       res.json({ user: userWithoutPassword });
     } catch (error) {
       console.error("Login error:", error);
@@ -140,11 +126,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/auth/me", requireAuth, async (req, res) => {
     try {
-      const user = await storage.getUser(req.session.userId!);
+      const user = await storage.getUser(parseInt(req.session.userId!));
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      res.json(user);
+      const { password: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
     } catch (error) {
       console.error("Get user error:", error);
       res.status(500).json({ message: "Failed to get user" });
@@ -155,7 +142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/user/profile", requireAuth, async (req, res) => {
     try {
       const { firstName, lastName, phone, company, bio } = req.body;
-      const user = await storage.updateUser(req.session.userId!, {
+      const user = await storage.updateUser(parseInt(req.session.userId!), {
         firstName,
         lastName,
         phone,
