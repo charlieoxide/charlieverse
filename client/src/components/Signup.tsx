@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Shield, ArrowLeft, User, Phone } from 'lucide-react';
-// import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 interface SignupProps {
   onBack: () => void;
@@ -14,6 +14,7 @@ const Signup: React.FC<SignupProps> = ({ onBack, onSwitchToLogin, onSuccess }) =
     lastName: '',
     email: '',
     phone: '',
+    company: '',
     password: '',
     confirmPassword: '',
     agreeToTerms: false,
@@ -23,7 +24,7 @@ const Signup: React.FC<SignupProps> = ({ onBack, onSwitchToLogin, onSuccess }) =
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  // const { signup } = useAuth();
+  const { signup } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -64,9 +65,7 @@ const Signup: React.FC<SignupProps> = ({ onBack, onSwitchToLogin, onSuccess }) =
     setErrors({});
     
     try {
-      // Simulate signup process
-      console.log('Signup attempt:', formData.email);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await signup(formData.email, formData.password, formData.firstName, formData.lastName, formData.phone, formData.company);
       onSuccess();
     } catch (error) {
       setErrors({ general: error instanceof Error ? error.message : 'Registration failed' });

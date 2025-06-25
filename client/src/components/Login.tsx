@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Shield, ArrowLeft } from 'lucide-react';
-// import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 interface LoginProps {
   onBack: () => void;
@@ -17,7 +17,7 @@ const Login: React.FC<LoginProps> = ({ onBack, onSwitchToSignup, onSuccess }) =>
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  // const { login } = useAuth();
+  const { login } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -33,9 +33,7 @@ const Login: React.FC<LoginProps> = ({ onBack, onSwitchToSignup, onSuccess }) =>
     setError('');
     
     try {
-      // Simulate login process
-      console.log('Login attempt:', formData.email);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await login(formData.email, formData.password);
       onSuccess();
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Login failed');

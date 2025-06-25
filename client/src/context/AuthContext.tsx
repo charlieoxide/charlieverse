@@ -1,29 +1,36 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 interface User {
-  id: number;
+  _id: string;
   email: string;
   firstName?: string;
   lastName?: string;
+  phone?: string;
+  company?: string;
+  bio?: string;
+  role?: string;
 }
 
 interface AuthContextType {
   currentUser: User | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, firstName: string, lastName: string) => Promise<void>;
+  signup: (email: string, password: string, firstName: string, lastName: string, phone?: string, company?: string, bio?: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (updates: Partial<User>) => Promise<void>;
   loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  currentUser: null,
+  login: async () => {},
+  signup: async () => {},
+  logout: async () => {},
+  updateProfile: async () => {},
+  loading: true
+});
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  return useContext(AuthContext);
 }
 
 async function apiRequest(url: string, options: RequestInit = {}) {
@@ -36,13 +43,12 @@ async function apiRequest(url: string, options: RequestInit = {}) {
     ...options,
   });
 
-  const data = await response.json();
-  
   if (!response.ok) {
-    throw new Error(data.message || 'Request failed');
+    const error = await response.json();
+    throw new Error(error.message || 'Request failed');
   }
-  
-  return data;
+
+  return response.json();
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -57,10 +63,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCurrentUser(data.user);
   };
 
-  const signup = async (email: string, password: string, firstName: string, lastName: string) => {
+  const signup = async (email: string, password: string, firstName: string, lastName: string, phone?: string, company?: string, bio?: string) => {
     const data = await apiRequest('/api/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, password, firstName, lastName }),
+      body: JSON.stringify({ email, password, firstName, lastName, phone, company, bio }),
     });
     setCurrentUser(data.user);
   };
@@ -70,6 +76,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       method: 'POST',
     });
     setCurrentUser(null);
+  };
+
+  const updateProfile = async (updates: Partial<User>) => {
+    const data = await apiRequest('/api/user/profile', {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+    setCurrentUser(data);
   };
 
   const checkAuth = async () => {
@@ -92,6 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     login,
     signup,
     logout,
+    updateProfile,
     loading
   };
 

@@ -3,9 +3,11 @@ import { Menu, X, Shield } from 'lucide-react';
 
 interface HeaderProps {
   onAuthClick: () => void;
+  onAdminClick?: () => void;
+  currentUser?: any;
 }
 
-const Header: React.FC<HeaderProps> = ({ onAuthClick }) => {
+const Header: React.FC<HeaderProps> = ({ onAuthClick, onAdminClick, currentUser }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -53,12 +55,22 @@ const Header: React.FC<HeaderProps> = ({ onAuthClick }) => {
                 {item.name}
               </a>
             ))}
-            <button 
-              onClick={onAuthClick}
-              className="bg-gradient-to-r from-cyan-500 to-purple-600 text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg transition-all duration-200"
-            >
-              Sign In
-            </button>
+            <div className="flex items-center space-x-4">
+              {currentUser?.role === 'admin' && onAdminClick && (
+                <button 
+                  onClick={onAdminClick}
+                  className="text-purple-400 hover:text-purple-300 font-medium transition-colors"
+                >
+                  Admin
+                </button>
+              )}
+              <button 
+                onClick={onAuthClick}
+                className="bg-gradient-to-r from-cyan-500 to-purple-600 text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg transition-all duration-200"
+              >
+                {currentUser ? 'Profile' : 'Sign In'}
+              </button>
+            </div>
           </nav>
 
           {/* Mobile menu button */}

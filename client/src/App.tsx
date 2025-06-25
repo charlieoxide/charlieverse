@@ -8,15 +8,17 @@ import Contact from './components/Contact';
 import Footer from './components/Footer';
 import AuthWrapper from './components/AuthWrapper';
 import UserProfile from './components/UserProfile';
+import AdminDashboard from './components/AdminDashboard';
+import { useAuth } from './context/AuthContext';
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState<'home' | 'auth' | 'profile'>('home');
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [currentView, setCurrentView] = useState<'home' | 'auth' | 'profile' | 'admin'>('home');
+  const { currentUser, loading } = useAuth();
 
   const showAuth = () => setCurrentView('auth');
   const showHome = () => setCurrentView('home');
   const showProfile = () => setCurrentView('profile');
+  const showAdmin = () => setCurrentView('admin');
 
   const handleAuthSuccess = () => {
     setCurrentView('profile');
@@ -35,19 +37,21 @@ function AppContent() {
   }
 
   if (currentView === 'profile' && currentUser) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white">
-        <div className="container mx-auto px-4 py-8">
-          <UserProfile />
-        </div>
-      </div>
-    );
+    return <UserProfile />;
+  }
+
+  if (currentView === 'admin' && currentUser?.role === 'admin') {
+    return <AdminDashboard />;
   }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <Header onAuthClick={showAuth} />
-      <Hero onAuthClick={showAuth} />
+      <Header 
+        onAuthClick={currentUser ? showProfile : showAuth}
+        onAdminClick={currentUser?.role === 'admin' ? showAdmin : undefined}
+        currentUser={currentUser}
+      />
+      <Hero onAuthClick={currentUser ? showProfile : showAuth} />
       <Services />
       <About />
       <Testimonials />

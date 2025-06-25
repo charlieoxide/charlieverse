@@ -5,10 +5,11 @@ import { setupVite, serveStatic, log } from "./vite";
 
 declare module "express-session" {
   interface SessionData {
-    userId?: number;
+    userId?: string;
     userEmail?: string;
     firstName?: string;
     lastName?: string;
+    role?: string;
   }
 }
 

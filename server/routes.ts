@@ -2,19 +2,49 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import bcrypt from "bcrypt";
-import { insertUserSchema } from "@shared/schema";
+import connectDB from "./database";
+
+// Session middleware setup
+declare module "express-session" {
+  interface SessionData {
+    userId?: string;
+    userEmail?: string;
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+  }
+}
+
+// Authentication middleware
+const requireAuth = (req: any, res: any, next: any) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  next();
+};
+
+const requireAdmin = (req: any, res: any, next: any) => {
+  if (!req.session.userId || req.session.role !== "admin") {
+    return res.status(403).json({ message: "Admin access required" });
+  }
+  next();
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Try to connect to MongoDB
+  await connectDB();
+  
+  // Create admin user if it doesn't exist
+  const { createAdminUser } = await import('./seedAdmin');
+  setTimeout(() => createAdminUser(), 1000);
+
   // Authentication routes
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { email, password, firstName, lastName } = req.body;
-      
-      // Validate input
-      const validatedData = insertUserSchema.parse({ username: email, password });
+      const { email, password, firstName, lastName, phone, company, bio } = req.body;
       
       // Check if user already exists
-      const existingUser = await storage.getUserByUsername(email);
+      const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ message: "User already exists" });
       }
@@ -24,28 +54,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create user
       const user = await storage.createUser({
-        username: email,
-        password: hashedPassword
+        email,
+        password: hashedPassword,
+        firstName,
+        lastName,
+        phone,
+        company,
+        bio
       });
       
-      // Store additional user info in session
-      req.session.userId = user.id;
-      req.session.userEmail = user.username;
-      req.session.firstName = firstName;
-      req.session.lastName = lastName;
+      // Set session
+      req.session.userId = user._id.toString();
+      req.session.userEmail = user.email;
+      req.session.firstName = user.firstName;
+      req.session.lastName = user.lastName;
+      req.session.role = user.role;
       
-      res.status(201).json({
-        message: "User created successfully",
-        user: {
-          id: user.id,
-          email: user.username,
-          firstName,
-          lastName
-        }
-      });
+      // Return user without password
+      const { password: _, ...userWithoutPassword } = user.toObject();
+      res.status(201).json({ user: userWithoutPassword });
     } catch (error) {
       console.error("Registration error:", error);
-      res.status(500).json({ message: "Registration failed" });
+      res.status(400).json({ message: "Registration failed" });
     }
   });
 
@@ -54,31 +84,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, password } = req.body;
       
       // Find user
-      const user = await storage.getUserByUsername(email);
+      const user = await storage.getUserByEmail(email);
       if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res.status(400).json({ message: "Invalid credentials" });
       }
       
-      // Verify password
-      const isValidPassword = await bcrypt.compare(password, user.password);
-      if (!isValidPassword) {
-        return res.status(401).json({ message: "Invalid credentials" });
+      // Check password
+      const isValid = await bcrypt.compare(password, user.password);
+      if (!isValid) {
+        return res.status(400).json({ message: "Invalid credentials" });
       }
       
       // Set session
-      req.session.userId = user.id;
-      req.session.userEmail = user.username;
+      req.session.userId = user._id.toString();
+      req.session.userEmail = user.email;
+      req.session.firstName = user.firstName;
+      req.session.lastName = user.lastName;
+      req.session.role = user.role;
       
-      res.json({
-        message: "Login successful",
-        user: {
-          id: user.id,
-          email: user.username
-        }
-      });
+      // Return user without password
+      const { password: _, ...userWithoutPassword } = user.toObject();
+      res.json({ user: userWithoutPassword });
     } catch (error) {
       console.error("Login error:", error);
-      res.status(500).json({ message: "Login failed" });
+      res.status(400).json({ message: "Login failed" });
     }
   });
 
@@ -87,52 +116,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (err) {
         return res.status(500).json({ message: "Logout failed" });
       }
-      res.clearCookie("connect.sid");
-      res.json({ message: "Logout successful" });
+      res.json({ message: "Logged out successfully" });
     });
   });
 
-  app.get("/api/auth/me", (req, res) => {
-    if (req.session.userId) {
-      res.json({
-        id: req.session.userId,
-        email: req.session.userEmail,
-        firstName: req.session.firstName,
-        lastName: req.session.lastName
-      });
-    } else {
-      res.status(401).json({ message: "Not authenticated" });
+  app.get("/api/auth/me", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Failed to get user" });
     }
   });
 
-  // Quote request route
-  app.post("/api/quotes", (req, res) => {
+  // User profile routes
+  app.put("/api/user/profile", requireAuth, async (req, res) => {
     try {
-      const { projectType, budget, timeline, description, contactMethod } = req.body;
+      const { firstName, lastName, phone, company, bio } = req.body;
+      const user = await storage.updateUser(req.session.userId!, {
+        firstName,
+        lastName,
+        phone,
+        company,
+        bio
+      });
       
-      // In a real app, you'd save this to a database
-      const quote = {
-        id: Date.now().toString(),
-        userId: req.session.userId,
-        userEmail: req.session.userEmail,
+      res.json(user);
+    } catch (error) {
+      console.error("Update profile error:", error);
+      res.status(400).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // Project routes
+  app.post("/api/projects", requireAuth, async (req, res) => {
+    try {
+      const { title, description, projectType, budget, timeline, contactMethod } = req.body;
+      const project = await storage.createProject({
+        userId: req.session.userId!,
+        title,
+        description,
         projectType,
         budget,
         timeline,
-        description,
-        contactMethod,
-        status: "pending",
-        createdAt: new Date().toISOString()
-      };
-      
-      console.log("New quote request:", quote);
-      
-      res.status(201).json({
-        message: "Quote request submitted successfully",
-        quote
+        contactMethod
       });
+      
+      res.json(project);
     } catch (error) {
-      console.error("Quote request error:", error);
-      res.status(500).json({ message: "Failed to submit quote request" });
+      console.error("Create project error:", error);
+      res.status(400).json({ message: "Failed to create project" });
+    }
+  });
+
+  app.get("/api/projects", requireAuth, async (req, res) => {
+    try {
+      const projects = await storage.getProjectsByUser(req.session.userId!);
+      res.json(projects);
+    } catch (error) {
+      console.error("Get projects error:", error);
+      res.status(500).json({ message: "Failed to get projects" });
+    }
+  });
+
+  app.get("/api/projects/:id", requireAuth, async (req, res) => {
+    try {
+      const project = await storage.getProject(req.params.id);
+      
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      
+      // Check if user owns the project or is admin
+      if (project.userId._id.toString() !== req.session.userId && req.session.role !== "admin") {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(project);
+    } catch (error) {
+      console.error("Get project error:", error);
+      res.status(500).json({ message: "Failed to get project" });
+    }
+  });
+
+  // Admin routes
+  app.get("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Get users error:", error);
+      res.status(500).json({ message: "Failed to get users" });
+    }
+  });
+
+  app.get("/api/admin/projects", requireAdmin, async (req, res) => {
+    try {
+      const projects = await storage.getAllProjects();
+      res.json(projects);
+    } catch (error) {
+      console.error("Get all projects error:", error);
+      res.status(500).json({ message: "Failed to get projects" });
+    }
+  });
+
+  app.put("/api/admin/projects/:id/status", requireAdmin, async (req, res) => {
+    try {
+      const { status, estimatedCost, actualCost, startDate, endDate } = req.body;
+      
+      const updates: any = {};
+      if (estimatedCost !== undefined) updates.estimatedCost = estimatedCost;
+      if (actualCost !== undefined) updates.actualCost = actualCost;
+      if (startDate) updates.startDate = new Date(startDate);
+      if (endDate) updates.endDate = new Date(endDate);
+      
+      const project = await storage.updateProjectStatus(req.params.id, status, updates);
+      res.json(project);
+    } catch (error) {
+      console.error("Update project status error:", error);
+      res.status(400).json({ message: "Failed to update project status" });
+    }
+  });
+
+  app.post("/api/admin/projects/:id/updates", requireAdmin, async (req, res) => {
+    try {
+      const { title, description, status } = req.body;
+      
+      const update = await storage.addProjectUpdate({
+        projectId: req.params.id,
+        userId: req.session.userId!,
+        title,
+        description,
+        status,
+      });
+      
+      res.json(update);
+    } catch (error) {
+      console.error("Add project update error:", error);
+      res.status(400).json({ message: "Failed to add project update" });
+    }
+  });
+
+  app.get("/api/projects/:id/updates", requireAuth, async (req, res) => {
+    try {
+      const updates = await storage.getProjectUpdates(req.params.id);
+      res.json(updates);
+    } catch (error) {
+      console.error("Get project updates error:", error);
+      res.status(500).json({ message: "Failed to get project updates" });
     }
   });
 
