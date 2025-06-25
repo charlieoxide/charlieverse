@@ -81,7 +81,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { email, password, firstName, lastName, phone, company, bio } = req.body;
+      const { email, firstName, lastName, phone, company, bio, firebaseUid } = req.body;
       
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
@@ -89,18 +89,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User already exists" });
       }
       
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 12);
-      
-      // Create user
+      // Create user with Firebase UID
       const user = await storage.createUser({
         email,
-        password: hashedPassword,
+        password: '', // Firebase handles authentication
         firstName,
         lastName,
         phone,
         company,
-        bio
+        bio,
+        firebaseUid
       });
       
       // Set session
@@ -121,20 +119,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { firebaseUid, email, displayName, idToken } = req.body;
       
-      // Find user
-      const user = await storage.getUserByEmail(email);
+      if (!firebaseUid || !email) {
+        return res.status(400).json({ message: "Firebase authentication required" });
+      }
+      
+      // Check if user exists, create if not
+      let user = await storage.getUserByEmail(email);
+      
       if (!user) {
-        return res.status(400).json({ message: "Invalid credentials" });
+        // Create new user from Firebase data
+        const nameParts = displayName ? displayName.split(' ') : ['', ''];
+        user = await storage.createUser({
+          email,
+          password: '', // Firebase handles auth, no local password needed
+          firstName: nameParts[0] || 'User',
+          lastName: nameParts[1] || '',
+          firebaseUid,
+          role: 'user'
+        });
       }
-      
-      // Check password
-      const isValid = await bcrypt.compare(password, user.password);
-      if (!isValid) {
-        return res.status(400).json({ message: "Invalid credentials" });
-      }
-      
+
       // Set session
       req.session.userId = user.id.toString();
       req.session.userEmail = user.email;
@@ -146,8 +152,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { password: _, ...userWithoutPassword } = user;
       res.json({ user: userWithoutPassword });
     } catch (error) {
-      console.error("Login error:", error);
-      res.status(400).json({ message: "Login failed" });
+      console.error("Firebase login error:", error);
+      res.status(400).json({ message: "Firebase authentication failed" });
     }
   });
 
