@@ -91,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await apiRequest('/api/auth/me');
       setCurrentUser(data);
     } catch (error) {
+      // Don't log auth check errors as they're expected when not logged in
       setCurrentUser(null);
     } finally {
       setLoading(false);

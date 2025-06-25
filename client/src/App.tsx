@@ -9,6 +9,7 @@ import Footer from './components/Footer';
 import AuthWrapper from './components/AuthWrapper';
 import UserProfile from './components/UserProfile';
 import AdminDashboard from './components/AdminDashboard';
+import LoadingSpinner from './components/LoadingSpinner';
 import { useAuth } from './context/AuthContext';
 
 function AppContent() {
@@ -25,11 +26,7 @@ function AppContent() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400"></div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (currentView === 'auth') {
