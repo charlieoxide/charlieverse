@@ -31,6 +31,39 @@ export class PostgreSQLStorage implements IStorage {
   private projectIdCounter = 1;
   private updateIdCounter = 1;
 
+  constructor() {
+    // Create default admin user
+    this.initializeDefaultAdmin();
+  }
+
+  private async initializeDefaultAdmin() {
+    try {
+      const bcrypt = await import('bcrypt');
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      
+      const adminUser: User = {
+        id: this.userIdCounter++,
+        email: 'admin@charlieverse.com',
+        password: hashedPassword,
+        firstName: 'Admin',
+        lastName: 'User',
+        phone: null,
+        role: 'admin',
+        profilePicture: null,
+        bio: 'System Administrator',
+        company: 'Charlieverse',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      this.fallbackUsers.set(adminUser.id, adminUser);
+      console.log('Default admin user created: admin@charlieverse.com / admin123');
+    } catch (error) {
+      console.error('Error creating default admin:', error);
+    }
+  }
+
   // User operations
   async getUser(id: number): Promise<User | null> {
     if (!useDatabase) {
