@@ -30,7 +30,7 @@ const Header: React.FC<HeaderProps> = ({ onAuthClick, onAdminClick, currentUser 
   ];
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+    <header className={`fixed top-0 left-0 right-0 z-50 theme-transition transition-all duration-300 ${
       isScrolled ? 'bg-background/95 backdrop-blur-md shadow-lg border-b border-border' : 'bg-background/20 backdrop-blur-md'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -43,7 +43,7 @@ const Header: React.FC<HeaderProps> = ({ onAuthClick, onAdminClick, currentUser 
                 <Shield className="h-8 w-8" />
               </div>
             </div>
-            <span className="text-xl font-bold text-foreground">Charlieverse</span>
+            <span className="text-xl font-bold text-foreground text-transition">Charlieverse</span>
           </div>
 
           {/* Desktop Navigation */}
@@ -52,7 +52,7 @@ const Header: React.FC<HeaderProps> = ({ onAuthClick, onAdminClick, currentUser 
               <a
                 key={item.name}
                 href={item.href}
-                className="text-muted-foreground hover:text-cyan-400 transition-colors duration-200 font-medium"
+                className="text-muted-foreground hover:text-cyan-400 text-transition transition-colors duration-200 font-medium"
               >
                 {item.name}
               </a>
@@ -80,7 +80,7 @@ const Header: React.FC<HeaderProps> = ({ onAuthClick, onAdminClick, currentUser 
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-muted-foreground hover:text-foreground transition-colors duration-200"
+              className="text-muted-foreground hover:text-foreground text-transition transition-colors duration-200"
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
@@ -89,13 +89,13 @@ const Header: React.FC<HeaderProps> = ({ onAuthClick, onAdminClick, currentUser 
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden bg-background/95 backdrop-blur-md border-t border-border">
+          <div className="md:hidden bg-background/95 backdrop-blur-md border-t border-border theme-transition">
             <div className="px-2 pt-2 pb-3 space-y-1">
               {navItems.map((item) => (
                 <a
                   key={item.name}
                   href={item.href}
-                  className="block px-3 py-2 text-muted-foreground hover:text-cyan-400 transition-colors duration-200"
+                  className="block px-3 py-2 text-muted-foreground hover:text-cyan-400 text-transition transition-colors duration-200"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {item.name}
@@ -111,7 +111,7 @@ const Header: React.FC<HeaderProps> = ({ onAuthClick, onAdminClick, currentUser 
                       onAdminClick();
                       setIsMenuOpen(false);
                     }}
-                    className="block w-full text-left px-3 py-2 text-purple-400 hover:text-purple-300 font-medium transition-colors"
+                    className="block w-full text-left px-3 py-2 text-purple-400 hover:text-purple-300 font-medium text-transition transition-colors"
                   >
                     Admin
                   </button>

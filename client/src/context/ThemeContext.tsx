@@ -33,6 +33,9 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement;
 
+    // Add transition class for smooth theme changes
+    root.style.setProperty('transition', 'background-color 0.3s ease, color 0.3s ease');
+
     root.classList.remove('light', 'dark');
 
     if (theme === 'system') {
@@ -41,11 +44,17 @@ export function ThemeProvider({
         ? 'dark'
         : 'light';
 
-      root.classList.add(systemTheme);
+      // Add a small delay to ensure smooth transition
+      requestAnimationFrame(() => {
+        root.classList.add(systemTheme);
+      });
       return;
     }
 
-    root.classList.add(theme);
+    // Add a small delay to ensure smooth transition
+    requestAnimationFrame(() => {
+      root.classList.add(theme);
+    });
   }, [theme]);
 
   const value = {

@@ -51,7 +51,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground theme-transition">
       <Header 
         onAuthClick={() => {
           if (currentUser) {
