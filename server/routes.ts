@@ -53,6 +53,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     setTimeout(() => createAdminUser(), 2000);
   } else {
     console.log('Database connection failed - please check DATABASE_URL');
+    // Create default admin user for in-memory storage
+    setTimeout(async () => {
+      try {
+        const users = await storage.getAllUsers();
+        if (users.length === 0) {
+          const adminUser = await storage.createUser({
+            email: 'admin@charlieverse.com',
+            password: 'admin123',
+            firstName: 'Admin',
+            lastName: 'User',
+            role: 'admin'
+          });
+          console.log('Default admin user created: admin@charlieverse.com / admin123');
+          
+          // Send welcome email if configured
+          if (emailService.isEmailServiceConfigured()) {
+            await emailService.sendWelcomeEmail(adminUser);
+          }
+        }
+      } catch (error) {
+        console.error('Error creating admin user:', error);
+      }
+    }, 1000);
   }
 
   // Firebase sync route
