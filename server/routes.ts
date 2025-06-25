@@ -47,8 +47,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Try to connect to PostgreSQL
   const dbConnected = await connectDB();
   
-  // Note: Admin user will be created automatically when admin@charlieverse.com first logs in with Firebase
-  console.log('Admin user (admin@charlieverse.com) will be created automatically on first Firebase login');
+  // Create default admin user
+  setTimeout(async () => {
+    try {
+      const existingAdmin = await storage.getUserByEmail('admin@charlieverse.com');
+      if (!existingAdmin) {
+        const adminUser = await storage.createUser({
+          email: 'admin@charlieverse.com',
+          password: '', // Firebase handles authentication
+          firstName: 'Admin',
+          lastName: 'User',
+          phone: '',
+          company: 'Charlieverse',
+          bio: 'System Administrator',
+          role: 'admin',
+          firebaseUid: null // Will be updated when Firebase user is created
+        });
+        console.log('Default admin user created: admin@charlieverse.com');
+        
+        // Send welcome email if configured
+        if (emailService.isEmailServiceConfigured()) {
+          await emailService.sendWelcomeEmail(adminUser);
+        }
+      }
+    } catch (error) {
+      console.error('Error creating default admin user:', error);
+    }
+  }, 1000);
 
   // Firebase sync route
   app.post('/api/auth/sync-firebase', async (req, res) => {

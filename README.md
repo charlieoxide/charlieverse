@@ -1,90 +1,212 @@
 # Charlieverse - Full-Stack Web Application
 
-A modern tech services company website built with React, Express, and PostgreSQL.
+A modern full-stack web application built with React, Express, and Firebase authentication. Features a comprehensive tech services showcase with user management, project requests, and real-time notifications.
 
-## Features
+## 🚀 Features
 
-- **Authentication System**: Complete user registration, login, and session management
-- **User Profiles**: Personal dashboards with quote request functionality
-- **Admin Dashboard**: User and project management for administrators
-- **Responsive Design**: Modern UI with Tailwind CSS and shadcn/ui components
-- **Type-Safe**: Full TypeScript implementation across frontend and backend
-- **Database**: PostgreSQL with Drizzle ORM and intelligent fallback storage
+- **Firebase Authentication**: Secure user authentication and registration
+- **Admin Dashboard**: Complete user and project management system
+- **User Portal**: Project request and management interface
+- **Real-time Notifications**: WebSocket-powered notifications
+- **File Upload System**: Secure file upload with image processing
+- **Analytics Dashboard**: Interactive charts and metrics
+- **Email Notifications**: Transactional email system
+- **Mobile Responsive**: Optimized for all device sizes
+- **Dark/Light Theme**: System and manual theme switching
 
-## Quick Start
+## 🛠️ Tech Stack
 
-### Prerequisites
-- Node.js 18+
-- PostgreSQL (local or cloud)
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for build tooling
+- **Tailwind CSS** with shadcn/ui components
+- **Firebase Auth** for authentication
+- **Socket.IO** for real-time features
+- **Recharts** for analytics visualization
 
-### Setup
+### Backend
+- **Node.js** with Express
+- **TypeScript** throughout
+- **WebSocket** support with Socket.IO
+- **File Upload** with Multer and Sharp
+- **Email Service** with Nodemailer/SendGrid
+- **Session Management** with PostgreSQL store
+
+### Database & Storage
+- **In-memory storage** for development
+- **Firebase** for user authentication
+- **File system** for uploads
+- **PostgreSQL** support (optional)
+
+## 📋 Prerequisites
+
+- Node.js 18+ 
+- Firebase project with Authentication enabled
+- SMTP credentials for email (optional)
+
+## 🔧 Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd charlieverse
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Configure Firebase**
+   
+   Update `client/src/firebase.ts` with your Firebase configuration:
+   ```javascript
+   const firebaseConfig = {
+     apiKey: "your-api-key",
+     authDomain: "your-project.firebaseapp.com",
+     projectId: "your-project-id",
+     storageBucket: "your-project.firebasestorage.app",
+     messagingSenderId: "your-sender-id",
+     appId: "your-app-id"
+   };
+   ```
+
+4. **Enable Firebase Authentication**
+   - Go to Firebase Console
+   - Enable Email/Password authentication
+   - Add your domain to authorized domains
+
+## 🚀 Running the Application
+
+### Development Mode
 ```bash
-# Install dependencies
-npm install
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your database URL and session secret
-
-# Initialize database
-npm run db:push
-
-# Start development server
 npm run dev
 ```
+This starts both the Express server (port 5000) and Vite dev server with hot reload.
 
-Open http://localhost:5000
+### Production Build
+```bash
+npm run build
+npm start
+```
 
-### Default Admin
-- Email: admin@charlieverse.com
-- Password: admin123
+## 👤 Admin Access
 
-## Project Structure
+Create an admin account using Firebase Authentication with:
+- **Email**: admin@charlieverse.com
+- **Password**: admin123
+
+The admin email automatically receives admin privileges.
+
+## 📁 Project Structure
 
 ```
+charlieverse/
 ├── client/                 # React frontend
 │   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── context/       # Authentication context
-│   │   └── main.tsx       # Entry point
-├── server/                # Express backend
-│   ├── database.ts        # Database connection
-│   ├── storage.ts         # Data access layer
+│   │   ├── components/     # UI components
+│   │   ├── context/        # React contexts
+│   │   ├── firebase.ts     # Firebase configuration
+│   │   └── ...
+├── server/                 # Express backend
+│   ├── analytics.ts        # Analytics service
+│   ├── email.ts           # Email service
+│   ├── fileUpload.ts      # File upload handling
 │   ├── routes.ts          # API routes
-│   └── index.ts           # Server entry point
+│   ├── storage.ts         # Data storage layer
+│   ├── websocket.ts       # WebSocket server
+│   └── ...
 ├── shared/                # Shared types and schemas
-│   └── schema.ts          # Database schema
-└── package.json           # Dependencies
+└── ...
 ```
 
-## Development
+## 🔌 API Endpoints
 
-### Available Scripts
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run db:push` - Push database schema changes
+### Authentication
+- `POST /api/auth/sync-firebase` - Sync Firebase user
+- `POST /api/auth/logout` - Logout user
+- `GET /api/auth/me` - Get current user
 
-### Environment Variables
-```env
-DATABASE_URL=postgresql://username:password@host:port/database
-SESSION_SECRET=your_secure_session_secret
-```
+### Projects
+- `GET /api/projects` - Get user projects
+- `POST /api/projects` - Create project request
+- `PATCH /api/admin/projects/:id/status` - Update project status (admin)
 
-## Deployment
+### File Upload
+- `POST /api/files/upload` - Upload files
+- `GET /api/files/:filename` - Serve uploaded files
 
-The application is configured for Replit deployment with automatic scaling. For other platforms:
+### Analytics
+- `GET /api/analytics/dashboard` - Get analytics data (admin)
+- `GET /api/analytics/projects/:id` - Get project analytics (admin)
 
-1. Build the application: `npm run build`
-2. Set environment variables
-3. Start with: `npm run start`
+## 🎨 UI Components
 
-## Tech Stack
+Built with shadcn/ui components including:
+- Responsive navigation and header
+- Dark/light theme toggle
+- Interactive dashboards
+- File upload with drag & drop
+- Real-time notification system
+- Analytics charts and metrics
 
-- **Frontend**: React 18, TypeScript, Tailwind CSS, Vite
-- **Backend**: Express.js, TypeScript, Node.js
-- **Database**: PostgreSQL, Drizzle ORM
-- **UI Components**: Radix UI, shadcn/ui
-- **Authentication**: Session-based with bcrypt
+## 🔄 Real-time Features
 
-For detailed setup instructions, see [SETUP_GUIDE.md](./SETUP_GUIDE.md) or [QUICK_START.md](./QUICK_START.md).
+- **WebSocket Notifications**: Instant updates for project changes
+- **Admin Alerts**: Real-time user activity notifications
+- **Project Updates**: Live status change notifications
+- **File Upload Progress**: Real-time upload feedback
+
+## 📧 Email Notifications
+
+Automated emails for:
+- Welcome messages for new users
+- Project status updates
+- Admin notifications for new projects
+- System alerts and updates
+
+## 📱 Mobile Responsive
+
+Fully responsive design with:
+- Mobile-first approach
+- Touch-friendly interfaces
+- Optimized layouts for all screen sizes
+- Progressive web app features
+
+## 🔒 Security Features
+
+- **Firebase Authentication**: Secure user management
+- **Session Management**: Express sessions with CSRF protection
+- **File Validation**: Secure file upload with type checking
+- **Role-based Access**: Admin and user role separation
+- **Input Sanitization**: XSS and injection protection
+
+## 🚀 Deployment
+
+The application is configured for deployment on:
+- **Replit**: Native support with workflows
+- **Vercel**: Frontend deployment
+- **Railway/Render**: Full-stack deployment
+- **Firebase Hosting**: Static hosting option
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🆘 Support
+
+For support and questions:
+- Create an issue in the repository
+- Contact: admin@charlieverse.com
+
+---
+
+Built with ❤️ using modern web technologies
