@@ -23,6 +23,7 @@ export const users = pgTable("users", {
   profilePicture: text("profile_picture"),
   bio: text("bio"),
   company: varchar("company", { length: 255 }),
+  firebaseUid: varchar("firebase_uid", { length: 255 }),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

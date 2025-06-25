@@ -42,6 +42,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('Database connection failed - please check DATABASE_URL');
   }
 
+  // Firebase sync route
+  app.post('/api/auth/sync-firebase', async (req, res) => {
+    try {
+      const { firebaseUid, email, displayName } = req.body;
+      
+      // Check if user already exists
+      let user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        // Create new user from Firebase data
+        const nameParts = displayName ? displayName.split(' ') : ['', ''];
+        user = await storage.createUser({
+          email,
+          password: '', // Firebase handles auth, no local password needed
+          firstName: nameParts[0] || 'User',
+          lastName: nameParts[1] || '',
+          firebaseUid,
+          role: 'user'
+        });
+      }
+
+      // Create session
+      req.session.userId = user.id.toString();
+      req.session.userEmail = user.email;
+      req.session.firstName = user.firstName;
+      req.session.lastName = user.lastName;
+      req.session.role = user.role;
+
+      const { password, ...userWithoutPassword } = user;
+      res.json({ user: userWithoutPassword });
+    } catch (error) {
+      console.error('Firebase sync error:', error);
+      res.status(400).json({ message: 'Firebase sync failed' });
+    }
+  });
+
   // Authentication routes
   app.post("/api/auth/register", async (req, res) => {
     try {

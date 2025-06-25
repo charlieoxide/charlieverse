@@ -52,6 +52,7 @@ export class PostgreSQLStorage implements IStorage {
         profilePicture: null,
         bio: 'System Administrator',
         company: 'Charlieverse',
+        firebaseUid: null,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date()
