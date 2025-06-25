@@ -11,7 +11,7 @@ import AuthWrapper from './components/AuthWrapper';
 import UserPanel from './components/UserPanel';
 import AdminPanel from './components/AdminPanel';
 import LoadingSpinner from './components/LoadingSpinner';
-import { ThemeDebug } from './components/ThemeDebug';
+
 
 function AppContent() {
   const [currentView, setCurrentView] = useState<'home' | 'auth' | 'user' | 'admin'>('home');
@@ -77,7 +77,6 @@ function AppContent() {
         <Contact />
       </main>
       <Footer />
-      <ThemeDebug />
     </div>
   );
 }
