@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role: isAdminEmail ? 'admin' : 'user'
         });
         
-        // Send welcome email
+        // Send welcome email for new users
         if (emailService.isEmailServiceConfigured()) {
           await emailService.sendWelcomeEmail(user);
         }
@@ -113,6 +113,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             name: `${user.firstName} ${user.lastName}`
           });
         }
+      } else {
+        // If user exists, update the role if it's the admin email
+        if (email === 'admin@charlieverse.com' && user.role !== 'admin') {
+          user = await storage.updateUser(user.id, { role: 'admin' });
+        }
+        // Update Firebase UID if it's missing
+        if (firebaseUid && !user.firebaseUid) {
+          user = await storage.updateUser(user.id, { firebaseUid });
+        }
       }
 
       // Create session
@@ -121,6 +130,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.firstName = user.firstName;
       req.session.lastName = user.lastName;
       req.session.role = user.role;
+
+      // Debug logging for admin users
+      if (email === 'admin@charlieverse.com') {
+        console.log(`Admin user sync: ${email}, role: ${user.role}, session role: ${req.session.role}`);
+      }
 
       const { password, ...userWithoutPassword } = user;
       res.json({ user: userWithoutPassword });
