@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { isFirebaseEnabled } from './firebase';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Services from './components/Services';
@@ -11,6 +12,7 @@ import AuthWrapper from './components/AuthWrapper';
 import UserPanel from './components/UserPanel';
 import AdminPanel from './components/AdminPanel';
 import LoadingSpinner from './components/LoadingSpinner';
+import FirebaseError from './components/FirebaseError';
 
 
 function AppContent() {
@@ -82,6 +84,11 @@ function AppContent() {
 }
 
 function App() {
+  // Check if Firebase is configured
+  if (!isFirebaseEnabled) {
+    return <FirebaseError />;
+  }
+
   return (
     <AuthProvider>
       <AppContent />

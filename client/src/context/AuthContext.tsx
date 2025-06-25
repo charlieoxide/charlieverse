@@ -88,47 +88,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signup = async (email: string, password: string, firstName: string, lastName: string, phone?: string, company?: string, bio?: string) => {
+    setLoading(true);
     try {
-      if (isFirebaseEnabled && auth) {
-        // Create user with Firebase
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const firebaseUser = userCredential.user;
-        
-        // Sync with backend
-        const data = await apiRequest('/api/auth/register', {
-          method: 'POST',
-          body: JSON.stringify({ 
-            email, 
-            password: '', // Not needed since Firebase handles auth
-            firstName, 
-            lastName, 
-            phone, 
-            company, 
-            bio,
-            firebaseUid: firebaseUser.uid
-          }),
-        });
-        setCurrentUser(data.user);
-      } else {
-        // Direct backend registration (fallback)
-        const data = await apiRequest('/api/auth/register', {
-          method: 'POST',
-          body: JSON.stringify({ 
-            email, 
-            password,
-            firstName, 
-            lastName, 
-            phone, 
-            company, 
-            bio,
-            directAuth: true
-          }),
-        });
-        setCurrentUser(data.user);
+      if (!isFirebaseEnabled || !auth) {
+        throw new Error('Firebase authentication is required but not configured.');
       }
+      
+      // Create user with Firebase
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+      
+      // Sync with backend
+      const response = await apiRequest('/api/auth/sync-firebase', {
+        method: 'POST',
+        body: JSON.stringify({
+          firebaseUid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: `${firstName} ${lastName}`,
+          firstName,
+          lastName,
+          phone,
+          company,
+          bio
+        })
+      });
+      setCurrentUser(response.user);
     } catch (error) {
       console.error('Signup error:', error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
