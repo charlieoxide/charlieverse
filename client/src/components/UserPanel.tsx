@@ -305,7 +305,7 @@ export default function UserPanel({ onBack }: UserPanelProps) {
         {activeTab === 'projects' && (
           <div>
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-medium text-gray-900">All Projects</h3>
+              <h3 className="text-lg font-medium text-foreground">All Projects</h3>
               <Button onClick={() => setShowQuoteForm(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Request Quote
@@ -318,20 +318,20 @@ export default function UserPanel({ onBack }: UserPanelProps) {
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{project.title}</h4>
-                        <p className="text-sm text-gray-600 mt-1">{project.description}</p>
+                        <h4 className="font-medium text-foreground">{project.title}</h4>
+                        <p className="text-sm text-muted-foreground mt-1">{project.description}</p>
                         <div className="flex items-center space-x-4 mt-2">
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             Type: {project.projectType}
                           </span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             Budget: {project.budget}
                           </span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             Timeline: {project.timeline}
                           </span>
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs text-muted-foreground mt-1">
                           Created: {new Date(project.createdAt).toLocaleDateString()}
                         </div>
                       </div>
@@ -408,10 +408,10 @@ export default function UserPanel({ onBack }: UserPanelProps) {
 
       {/* Quote Form Modal */}
       {showQuoteForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-card rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-border shadow-lg">
             <div className="p-6">
-              <h3 className="text-lg font-medium mb-4">Request Project Quote</h3>
+              <h3 className="text-lg font-medium mb-4 text-foreground">Request Project Quote</h3>
               <form onSubmit={handleQuoteSubmit} className="space-y-4">
                 <div>
                   <Label htmlFor="title">Project Title</Label>
@@ -428,7 +428,7 @@ export default function UserPanel({ onBack }: UserPanelProps) {
                     id="projectType"
                     value={quoteForm.projectType}
                     onChange={(e) => setQuoteForm({...quoteForm, projectType: e.target.value})}
-                    className="w-full border rounded-md px-3 py-2"
+                    className="w-full bg-background border border-input rounded-md px-3 py-2 text-foreground focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring"
                     required
                   >
                     <option value="">Select type</option>
@@ -446,7 +446,7 @@ export default function UserPanel({ onBack }: UserPanelProps) {
                     id="budget"
                     value={quoteForm.budget}
                     onChange={(e) => setQuoteForm({...quoteForm, budget: e.target.value})}
-                    className="w-full border rounded-md px-3 py-2"
+                    className="w-full bg-background border border-input rounded-md px-3 py-2 text-foreground focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring"
                     required
                   >
                     <option value="">Select budget</option>
@@ -463,7 +463,7 @@ export default function UserPanel({ onBack }: UserPanelProps) {
                     id="timeline"
                     value={quoteForm.timeline}
                     onChange={(e) => setQuoteForm({...quoteForm, timeline: e.target.value})}
-                    className="w-full border rounded-md px-3 py-2"
+                    className="w-full bg-background border border-input rounded-md px-3 py-2 text-foreground focus:outline-none focus:border-ring focus:ring-1 focus:ring-ring"
                     required
                   >
                     <option value="">Select timeline</option>

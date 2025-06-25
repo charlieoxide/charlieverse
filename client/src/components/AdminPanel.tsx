@@ -145,20 +145,20 @@ export default function AdminPanel({ onBack }: AdminPanelProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
+              <h1 className="text-2xl font-bold text-foreground">Admin Panel</h1>
               <Badge variant="secondary">Administrator</Badge>
             </div>
             <div className="flex items-center space-x-4">
               {onBack && (
                 <button
                   onClick={onBack}
-                  className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   <span>Back to Site</span>
                 </button>
               )}
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 Welcome, {currentUser?.firstName} {currentUser?.lastName}
               </span>
               <button
