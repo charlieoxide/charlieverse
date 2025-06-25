@@ -46,8 +46,10 @@ export default function UserPanel({ onBack }: UserPanelProps) {
   const { currentUser, updateProfile, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [projects, setProjects] = useState<Project[]>([]);
+  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showQuoteForm, setShowQuoteForm] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [quoteForm, setQuoteForm] = useState<QuoteFormData>({
     title: '',
     projectType: '',
@@ -69,6 +71,10 @@ export default function UserPanel({ onBack }: UserPanelProps) {
     fetchProjects();
   }, []);
 
+  useEffect(() => {
+    setFilteredProjects(projects);
+  }, [projects]);
+
   const fetchProjects = async () => {
     try {
       const response = await fetch('/api/user/projects');
@@ -81,6 +87,62 @@ export default function UserPanel({ onBack }: UserPanelProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearchChange = (query: string) => {
+    const filtered = projects.filter(project =>
+      project.title.toLowerCase().includes(query.toLowerCase()) ||
+      project.description.toLowerCase().includes(query.toLowerCase()) ||
+      project.projectType.toLowerCase().includes(query.toLowerCase())
+    );
+    setFilteredProjects(filtered);
+  };
+
+  const handleFilterChange = (filters: any) => {
+    let filtered = [...projects];
+
+    // Filter by status
+    if (filters.status.length > 0) {
+      filtered = filtered.filter(project => filters.status.includes(project.status));
+    }
+
+    // Filter by project type
+    if (filters.projectType.length > 0) {
+      filtered = filtered.filter(project => filters.projectType.includes(project.projectType));
+    }
+
+    // Filter by date range
+    if (filters.dateRange.start || filters.dateRange.end) {
+      filtered = filtered.filter(project => {
+        const projectDate = new Date(project.createdAt);
+        const startDate = filters.dateRange.start ? new Date(filters.dateRange.start) : null;
+        const endDate = filters.dateRange.end ? new Date(filters.dateRange.end) : null;
+        
+        if (startDate && projectDate < startDate) return false;
+        if (endDate && projectDate > endDate) return false;
+        return true;
+      });
+    }
+
+    // Sort
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      switch (filters.sortBy) {
+        case 'title':
+          comparison = a.title.localeCompare(b.title);
+          break;
+        case 'status':
+          comparison = a.status.localeCompare(b.status);
+          break;
+        case 'date':
+        default:
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+      }
+      return filters.sortOrder === 'desc' ? -comparison : comparison;
+    });
+
+    setFilteredProjects(filtered);
   };
 
   const handleQuoteSubmit = async (e: React.FormEvent) => {
@@ -149,20 +211,20 @@ export default function UserPanel({ onBack }: UserPanelProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">My Dashboard</h1>
+              <h1 className="text-2xl font-bold text-foreground">My Dashboard</h1>
               <Badge variant="secondary">User</Badge>
             </div>
             <div className="flex items-center space-x-4">
               {onBack && (
                 <button
                   onClick={onBack}
-                  className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+                  className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ArrowLeft className="h-4 w-4" />
                   <span>Back to Site</span>
                 </button>
               )}
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 Welcome, {currentUser?.firstName} {currentUser?.lastName}
               </span>
               <button
@@ -304,44 +366,82 @@ export default function UserPanel({ onBack }: UserPanelProps) {
         {/* Projects Tab */}
         {activeTab === 'projects' && (
           <div>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <h3 className="text-lg font-medium text-foreground">All Projects</h3>
-              <Button onClick={() => setShowQuoteForm(true)}>
+              <Button onClick={() => setShowQuoteForm(true)} className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Request Quote
               </Button>
             </div>
 
+            <SearchFilter
+              onFilterChange={handleFilterChange}
+              onSearchChange={handleSearchChange}
+              totalItems={projects.length}
+              itemType="projects"
+            />
+
             <div className="grid gap-4">
-              {projects.map((project) => (
-                <Card key={project.id}>
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-foreground">{project.title}</h4>
-                        <p className="text-sm text-muted-foreground mt-1">{project.description}</p>
-                        <div className="flex items-center space-x-4 mt-2">
-                          <span className="text-xs text-muted-foreground">
-                            Type: {project.projectType}
+              {filteredProjects.map((project) => (
+                <Card key={project.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                          <h4 className="font-medium text-foreground truncate">{project.title}</h4>
+                          <Badge className={`${getStatusColor(project.status)} self-start sm:self-center`}>
+                            {project.status.replace('_', ' ')}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{project.description}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-muted-foreground">
+                          <span className="flex items-center">
+                            <span className="font-medium mr-1">Type:</span> {project.projectType.replace('_', ' ')}
                           </span>
-                          <span className="text-xs text-muted-foreground">
-                            Budget: {project.budget}
+                          <span className="flex items-center">
+                            <span className="font-medium mr-1">Budget:</span> {project.budget}
                           </span>
-                          <span className="text-xs text-muted-foreground">
-                            Timeline: {project.timeline}
+                          <span className="flex items-center">
+                            <span className="font-medium mr-1">Timeline:</span> {project.timeline}
                           </span>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Created: {new Date(project.createdAt).toLocaleDateString()}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mt-3 gap-2">
+                          <div className="text-xs text-muted-foreground">
+                            Created: {new Date(project.createdAt).toLocaleDateString()}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedProject(selectedProject?.id === project.id ? null : project)}
+                            className="self-start sm:self-center"
+                          >
+                            {selectedProject?.id === project.id ? 'Hide Timeline' : 'View Timeline'}
+                          </Button>
                         </div>
                       </div>
-                      <Badge className={getStatusColor(project.status)}>
-                        {project.status.replace('_', ' ')}
-                      </Badge>
                     </div>
+                    
+                    {/* Project Timeline */}
+                    {selectedProject?.id === project.id && (
+                      <div className="mt-6 border-t border-border pt-6">
+                        <ProjectTimeline projectId={project.id} />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
+              
+              {filteredProjects.length === 0 && projects.length > 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No projects match your current filters.
+                </div>
+              )}
+              
+              {projects.length === 0 && !loading && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No projects yet. Click "Request Quote" to get started!
+                </div>
+              )}
             </div>
           </div>
         )}
