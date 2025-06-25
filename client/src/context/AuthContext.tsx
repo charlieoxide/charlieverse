@@ -61,38 +61,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const login = async (email: string, password: string) => {
+    setLoading(true);
     try {
-      if (isFirebaseEnabled && auth) {
-        // Sign in with Firebase
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const firebaseUser = userCredential.user;
-        
-        // Sync with backend
-        const data = await apiRequest('/api/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ 
-            firebaseUid: firebaseUser.uid,
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName,
-            idToken: await firebaseUser.getIdToken()
-          }),
-        });
-        setCurrentUser(data.user);
-      } else {
-        // Direct backend authentication (fallback)
-        const data = await apiRequest('/api/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ 
-            email,
-            password,
-            directAuth: true
-          }),
-        });
-        setCurrentUser(data.user);
+      if (!isFirebaseEnabled || !auth) {
+        throw new Error('Firebase authentication is required but not configured. Please provide Firebase credentials.');
       }
+      
+      // Firebase authentication only
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      // Sync with backend
+      const response = await apiRequest('/api/auth/sync-firebase', {
+        method: 'POST',
+        body: JSON.stringify({
+          firebaseUid: result.user.uid,
+          email: result.user.email,
+          displayName: result.user.displayName
+        })
+      });
+      setCurrentUser(response.user);
     } catch (error) {
       console.error('Login error:', error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 

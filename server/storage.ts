@@ -24,6 +24,7 @@ export interface IStorage {
 }
 
 export class PostgreSQLStorage implements IStorage {
+  // Firebase-only storage - no local data
   private fallbackUsers = new Map<number, User>();
   private fallbackProjects = new Map<number, Project>();
   private fallbackUpdates = new Map<number, ProjectUpdate>();

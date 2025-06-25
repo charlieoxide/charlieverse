@@ -23,9 +23,9 @@ The application follows a three-tier architecture:
 - **Development**: Hot reload with tsx
 
 ### Database
-- **Primary Storage**: In-memory storage for simplicity
-- **Storage Layer**: Interface-based storage with full CRUD operations
-- **Data Persistence**: Resets on server restart (perfect for development)
+- **Primary Storage**: Firebase-managed user authentication
+- **Storage Layer**: Interface-based storage with full CRUD operations for projects
+- **Data Persistence**: User data managed by Firebase, projects in-memory for development
 - **Schema**: TypeScript interfaces for type safety
 
 ## Key Components
