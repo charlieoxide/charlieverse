@@ -68,9 +68,15 @@ export class PostgreSQLStorage implements IStorage {
     if (!useDatabase) {
       const user: User = {
         id: this.userIdCounter++,
-        ...userData,
-        role: userData.role || 'user',
+        email: userData.email,
+        password: userData.password,
+        firstName: userData.firstName || null,
+        lastName: userData.lastName || null,
+        phone: userData.phone || null,
+        role: 'user',
         profilePicture: null,
+        bio: userData.bio || null,
+        company: userData.company || null,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -86,9 +92,15 @@ export class PostgreSQLStorage implements IStorage {
       console.error('Error creating user:', error);
       const user: User = {
         id: this.userIdCounter++,
-        ...userData,
-        role: userData.role || 'user',
+        email: userData.email,
+        password: userData.password,
+        firstName: userData.firstName || null,
+        lastName: userData.lastName || null,
+        phone: userData.phone || null,
+        role: 'user',
         profilePicture: null,
+        bio: userData.bio || null,
+        company: userData.company || null,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date()
