@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { User, LogOut, Mail, Calendar, Shield, FileText, Send } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 
 interface QuoteFormData {
   projectType: string;
@@ -12,7 +11,14 @@ interface QuoteFormData {
 }
 
 const UserProfile: React.FC = () => {
-  const { currentUser, logout } = useAuth();
+  // Simulate current user data
+  const currentUser = {
+    id: 1,
+    email: 'demo@example.com',
+    firstName: 'Demo',
+    lastName: 'User'
+  };
+  
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [quoteForm, setQuoteForm] = useState<QuoteFormData>({
     projectType: '',
@@ -24,11 +30,10 @@ const UserProfile: React.FC = () => {
   const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
   const [quoteSuccess, setQuoteSuccess] = useState(false);
 
-  if (!currentUser) return null;
-
   const handleLogout = async () => {
     try {
-      await logout();
+      console.log('Logout clicked');
+      // Logout functionality will be implemented with backend
     } catch (error) {
       console.error('Logout failed:', error);
     }

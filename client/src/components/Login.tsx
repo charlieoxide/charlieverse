@@ -33,7 +33,9 @@ const Login: React.FC<LoginProps> = ({ onBack, onSwitchToSignup, onSuccess }) =>
     setError('');
     
     try {
-      await login(formData.email, formData.password);
+      // Simulate login process
+      console.log('Login attempt:', formData.email);
+      await new Promise(resolve => setTimeout(resolve, 1000));
       onSuccess();
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Login failed');

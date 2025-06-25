@@ -64,7 +64,9 @@ const Signup: React.FC<SignupProps> = ({ onBack, onSwitchToLogin, onSuccess }) =
     setErrors({});
     
     try {
-      await signup(formData.email, formData.password, formData.firstName, formData.lastName);
+      // Simulate signup process
+      console.log('Signup attempt:', formData.email);
+      await new Promise(resolve => setTimeout(resolve, 1000));
       onSuccess();
     } catch (error) {
       setErrors({ general: error instanceof Error ? error.message : 'Registration failed' });
