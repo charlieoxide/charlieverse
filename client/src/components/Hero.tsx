@@ -9,8 +9,8 @@ const Hero: React.FC<HeroProps> = ({ onAuthClick }) => {
   return (
     <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Animated background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-purple-900/20 to-cyan-900/20">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=%2260%22 height=%2260%22 viewBox=%220 0 60 60%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22none%22 fill-rule=%22evenodd%22%3E%3Cg fill=%22%23ffffff%22 fill-opacity=%220.03%22%3E%3Ccircle cx=%2230%22 cy=%2230%22 r=%221%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-40"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-purple-900/20 to-cyan-900/20">
+        <div className="absolute inset-0 bg-grid-pattern opacity-40"></div>
       </div>
 
       {/* Floating particles */}
@@ -35,19 +35,19 @@ const Hero: React.FC<HeroProps> = ({ onAuthClick }) => {
         <div className="space-y-8">
           {/* Main heading */}
           <div className="space-y-4">
-            <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight">
+            <h1 className="text-5xl md:text-7xl font-bold text-foreground leading-tight">
               We Build,{' '}
               <span className="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
                 You Grow
               </span>
             </h1>
-            <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto">
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto">
               Tech Solutions for the Future
             </p>
           </div>
 
           {/* Subtitle */}
-          <p className="text-lg md:text-xl text-gray-400 max-w-4xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
             Empowering businesses with cutting-edge technology solutions. From web development to AI implementation, 
             cybersecurity to academic projects — we transform your vision into reality.
           </p>
@@ -61,7 +61,7 @@ const Hero: React.FC<HeroProps> = ({ onAuthClick }) => {
               <span>Start Your Project</span>
               <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
             </button>
-            <button className="border-2 border-cyan-400 text-cyan-400 px-8 py-4 rounded-full font-semibold text-lg hover:bg-cyan-400 hover:text-gray-900 transition-all duration-300">
+            <button className="border-2 border-cyan-400 text-cyan-400 px-8 py-4 rounded-full font-semibold text-lg hover:bg-cyan-400 hover:text-background transition-all duration-300">
               Request a Quote
             </button>
           </div>
@@ -78,7 +78,7 @@ const Hero: React.FC<HeroProps> = ({ onAuthClick }) => {
                 <div className="text-3xl md:text-4xl font-bold text-cyan-400 mb-2">
                   {stat.number}
                 </div>
-                <div className="text-gray-400 text-sm md:text-base">
+                <div className="text-muted-foreground text-sm md:text-base">
                   {stat.label}
                 </div>
               </div>
