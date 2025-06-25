@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth, isFirebaseEnabled } from '../firebase';
 
 interface User {
   id: number;
@@ -62,21 +62,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      // Sign in with Firebase
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const firebaseUser = userCredential.user;
-      
-      // Sync with backend
-      const data = await apiRequest('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ 
-          firebaseUid: firebaseUser.uid,
-          email: firebaseUser.email,
-          displayName: firebaseUser.displayName,
-          idToken: await firebaseUser.getIdToken()
-        }),
-      });
-      setCurrentUser(data.user);
+      if (isFirebaseEnabled && auth) {
+        // Sign in with Firebase
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const firebaseUser = userCredential.user;
+        
+        // Sync with backend
+        const data = await apiRequest('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ 
+            firebaseUid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            idToken: await firebaseUser.getIdToken()
+          }),
+        });
+        setCurrentUser(data.user);
+      } else {
+        // Direct backend authentication (fallback)
+        const data = await apiRequest('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ 
+            email,
+            password,
+            directAuth: true
+          }),
+        });
+        setCurrentUser(data.user);
+      }
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -85,25 +98,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = async (email: string, password: string, firstName: string, lastName: string, phone?: string, company?: string, bio?: string) => {
     try {
-      // Create user with Firebase
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const firebaseUser = userCredential.user;
-      
-      // Sync with backend
-      const data = await apiRequest('/api/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({ 
-          email, 
-          password: '', // Not needed since Firebase handles auth
-          firstName, 
-          lastName, 
-          phone, 
-          company, 
-          bio,
-          firebaseUid: firebaseUser.uid
-        }),
-      });
-      setCurrentUser(data.user);
+      if (isFirebaseEnabled && auth) {
+        // Create user with Firebase
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const firebaseUser = userCredential.user;
+        
+        // Sync with backend
+        const data = await apiRequest('/api/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ 
+            email, 
+            password: '', // Not needed since Firebase handles auth
+            firstName, 
+            lastName, 
+            phone, 
+            company, 
+            bio,
+            firebaseUid: firebaseUser.uid
+          }),
+        });
+        setCurrentUser(data.user);
+      } else {
+        // Direct backend registration (fallback)
+        const data = await apiRequest('/api/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ 
+            email, 
+            password,
+            firstName, 
+            lastName, 
+            phone, 
+            company, 
+            bio,
+            directAuth: true
+          }),
+        });
+        setCurrentUser(data.user);
+      }
     } catch (error) {
       console.error('Signup error:', error);
       throw error;
@@ -112,8 +143,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      // Sign out from Firebase
-      await signOut(auth);
+      if (isFirebaseEnabled && auth) {
+        // Sign out from Firebase
+        await signOut(auth);
+      }
       
       // Clear backend session
       await apiRequest('/api/auth/logout', {
@@ -150,31 +183,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setFirebaseUser(firebaseUser);
-      if (firebaseUser) {
-        try {
-          // Sync Firebase user with backend
-          const data = await apiRequest('/api/auth/sync-firebase', {
-            method: 'POST',
-            body: JSON.stringify({
-              firebaseUid: firebaseUser.uid,
-              email: firebaseUser.email,
-              displayName: firebaseUser.displayName
-            }),
-          });
-          setCurrentUser(data.user);
-        } catch (error) {
-          console.error('Firebase sync error:', error);
+    if (isFirebaseEnabled && auth) {
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        setFirebaseUser(firebaseUser);
+        if (firebaseUser) {
+          try {
+            // Sync Firebase user with backend
+            const data = await apiRequest('/api/auth/sync-firebase', {
+              method: 'POST',
+              body: JSON.stringify({
+                firebaseUid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName
+              }),
+            });
+            setCurrentUser(data.user);
+          } catch (error) {
+            console.error('Firebase sync error:', error);
+            setCurrentUser(null);
+          }
+        } else {
           setCurrentUser(null);
         }
-      } else {
-        setCurrentUser(null);
-      }
-      setLoading(false);
-    });
+        setLoading(false);
+      });
 
-    return unsubscribe;
+      return unsubscribe;
+    } else {
+      // Firebase not configured, check auth with backend directly
+      checkAuth();
+    }
   }, []);
 
   const value: AuthContextType = {

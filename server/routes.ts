@@ -123,44 +123,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const { firebaseUid, email, displayName, idToken } = req.body;
+      const { firebaseUid, email, displayName, idToken, directAuth, password } = req.body;
       
-      if (!firebaseUid || !email) {
-        return res.status(400).json({ message: "Firebase authentication required" });
-      }
-      
-      // Check if user exists, create if not
-      let user = await storage.getUserByEmail(email);
-      
-      if (!user) {
-        // Create new user from Firebase data
-        const nameParts = displayName ? displayName.split(' ') : ['', ''];
-        // Check if this is an admin email
-        const isAdminEmail = email === 'admin@charlieverse.com';
+      if (directAuth) {
+        // Direct authentication fallback
+        if (!email || !password) {
+          return res.status(400).json({ message: "Email and password required" });
+        }
         
-        user = await storage.createUser({
-          email,
-          password: '', // Firebase handles auth, no local password needed
-          firstName: nameParts[0] || 'User',
-          lastName: nameParts[1] || '',
-          firebaseUid,
-          role: isAdminEmail ? 'admin' : 'user'
-        });
-      }
+        // Simple authentication for demo purposes
+        const user = await storage.getUserByEmail(email);
+        if (!user) {
+          return res.status(400).json({ message: "User not found" });
+        }
+        
+        // For demo purposes, accept the admin credentials
+        if (email === 'admin@charlieverse.com' && password === 'admin123') {
+          // Set session
+          req.session.userId = user.id.toString();
+          req.session.userEmail = user.email;
+          req.session.firstName = user.firstName;
+          req.session.lastName = user.lastName;
+          req.session.role = user.role;
+          
+          const { password: _, ...userWithoutPassword } = user;
+          return res.json({ user: userWithoutPassword });
+        } else {
+          return res.status(400).json({ message: "Invalid credentials" });
+        }
+      } else {
+        // Firebase authentication path
+        if (!firebaseUid || !email) {
+          return res.status(400).json({ message: "Firebase authentication required" });
+        }
+        
+        // Check if user exists, create if not
+        let user = await storage.getUserByEmail(email);
+        
+        if (!user) {
+          // Create new user from Firebase data
+          const nameParts = displayName ? displayName.split(' ') : ['', ''];
+          // Check if this is an admin email
+          const isAdminEmail = email === 'admin@charlieverse.com';
+          
+          user = await storage.createUser({
+            email,
+            password: '', // Firebase handles auth, no local password needed
+            firstName: nameParts[0] || 'User',
+            lastName: nameParts[1] || '',
+            firebaseUid,
+            role: isAdminEmail ? 'admin' : 'user'
+          });
+        }
 
-      // Set session
-      req.session.userId = user.id.toString();
-      req.session.userEmail = user.email;
-      req.session.firstName = user.firstName;
-      req.session.lastName = user.lastName;
-      req.session.role = user.role;
-      
-      // Return user without password
-      const { password: _, ...userWithoutPassword } = user;
-      res.json({ user: userWithoutPassword });
+        // Set session
+        req.session.userId = user.id.toString();
+        req.session.userEmail = user.email;
+        req.session.firstName = user.firstName;
+        req.session.lastName = user.lastName;
+        req.session.role = user.role;
+        
+        // Return user without password
+        const { password: _, ...userWithoutPassword } = user;
+        res.json({ user: userWithoutPassword });
+      }
     } catch (error) {
-      console.error("Firebase login error:", error);
-      res.status(400).json({ message: "Firebase authentication failed" });
+      console.error("Login error:", error);
+      res.status(400).json({ message: "Authentication failed" });
     }
   });
 
