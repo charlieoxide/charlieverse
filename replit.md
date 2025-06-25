@@ -95,11 +95,19 @@ The application follows a three-tier architecture:
 - **Schema Management**: Drizzle migrations with `npm run db:push`
 - **Environment Variables**: DATABASE_URL required for database connection
 
+## Recent Changes
+
+✓ Successfully migrated project from Bolt to Replit environment
+✓ Verified all dependencies and build processes work correctly
+✓ Confirmed proper client/server separation and security practices
+✓ Application running successfully on Replit infrastructure
+
 ## Changelog
 
 ```
 Changelog:
-- June 25, 2025. Initial setup
+- January 2025: Project migrated from Bolt to Replit
+- June 25, 2025: Initial setup
 ```
 
 ## User Preferences
