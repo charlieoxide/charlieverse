@@ -14,7 +14,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 
 function AppContent() {
   const [currentView, setCurrentView] = useState<'home' | 'auth' | 'user' | 'admin'>('home');
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading, logout } = useAuth();
 
   const showAuth = () => setCurrentView('auth');
   const showHome = () => setCurrentView('home');
@@ -29,6 +29,11 @@ function AppContent() {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+    setCurrentView('home');
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -38,11 +43,11 @@ function AppContent() {
   }
 
   if (currentView === 'user' && currentUser) {
-    return <UserPanel />;
+    return <UserPanel onBack={() => setCurrentView('home')} />;
   }
 
   if (currentView === 'admin' && currentUser?.role === 'admin') {
-    return <AdminPanel />;
+    return <AdminPanel onBack={() => setCurrentView('home')} />;
   }
 
   return (
@@ -61,6 +66,7 @@ function AppContent() {
         }}
         onAdminClick={currentUser?.role === 'admin' ? showAdminPanel : undefined}
         currentUser={currentUser}
+        onLogout={handleLogout}
       />
       <main>
         <Hero onAuthClick={showAuth} />

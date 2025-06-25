@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,8 +39,12 @@ interface Project {
   userId: number;
 }
 
-export default function AdminPanel() {
-  const { currentUser } = useAuth();
+interface AdminPanelProps {
+  onBack?: () => void;
+}
+
+export default function AdminPanel({ onBack }: AdminPanelProps) {
+  const { currentUser, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -142,9 +147,24 @@ export default function AdminPanel() {
               <Badge variant="secondary">Administrator</Badge>
             </div>
             <div className="flex items-center space-x-4">
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span>Back to Site</span>
+                </button>
+              )}
               <span className="text-sm text-gray-600">
                 Welcome, {currentUser?.firstName} {currentUser?.lastName}
               </span>
+              <button
+                onClick={logout}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded transition-colors text-sm"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>

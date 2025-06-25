@@ -5,6 +5,7 @@ interface HeaderProps {
   onAuthClick: () => void;
   onAdminClick?: () => void;
   currentUser?: any;
+  onLogout?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ onAuthClick, onAdminClick, currentUser }) => {
