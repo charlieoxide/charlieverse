@@ -7,21 +7,47 @@ import Testimonials from './components/Testimonials';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 import AuthWrapper from './components/AuthWrapper';
+import UserProfile from './components/UserProfile';
+import { useAuth } from './context/AuthContext';
 
-function App() {
-  const [currentView, setCurrentView] = useState<'home' | 'auth'>('home');
+function AppContent() {
+  const [currentView, setCurrentView] = useState<'home' | 'auth' | 'profile'>('home');
+  const { currentUser, loading } = useAuth();
 
   const showAuth = () => setCurrentView('auth');
   const showHome = () => setCurrentView('home');
+  const showProfile = () => setCurrentView('profile');
+
+  const handleAuthSuccess = () => {
+    setCurrentView('profile');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400"></div>
+      </div>
+    );
+  }
 
   if (currentView === 'auth') {
-    return <AuthWrapper onBack={showHome} />;
+    return <AuthWrapper onBack={showHome} onSuccess={handleAuthSuccess} />;
+  }
+
+  if (currentView === 'profile' && currentUser) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white">
+        <div className="container mx-auto px-4 py-8">
+          <UserProfile />
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <Header onAuthClick={showAuth} />
-      <Hero onAuthClick={showAuth} />
+      <Header onAuthClick={currentUser ? showProfile : showAuth} />
+      <Hero onAuthClick={currentUser ? showProfile : showAuth} />
       <Services />
       <About />
       <Testimonials />
@@ -29,6 +55,10 @@ function App() {
       <Footer />
     </div>
   );
+}
+
+function App() {
+  return <AppContent />;
 }
 
 export default App;

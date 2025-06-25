@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Shield, ArrowLeft, User, Phone } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface SignupProps {
   onBack: () => void;
   onSwitchToLogin: () => void;
+  onSuccess: () => void;
 }
 
-const Signup: React.FC<SignupProps> = ({ onBack, onSwitchToLogin }) => {
+const Signup: React.FC<SignupProps> = ({ onBack, onSwitchToLogin, onSuccess }) => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -21,6 +23,7 @@ const Signup: React.FC<SignupProps> = ({ onBack, onSwitchToLogin }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { signup } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -58,13 +61,16 @@ const Signup: React.FC<SignupProps> = ({ onBack, onSwitchToLogin }) => {
     if (!validateForm()) return;
     
     setIsLoading(true);
+    setErrors({});
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    console.log('Signup attempt:', formData);
-    setIsLoading(false);
-    // Handle successful signup here
+    try {
+      await signup(formData.email, formData.password, formData.firstName, formData.lastName);
+      onSuccess();
+    } catch (error) {
+      setErrors({ general: error instanceof Error ? error.message : 'Registration failed' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -102,6 +108,11 @@ const Signup: React.FC<SignupProps> = ({ onBack, onSwitchToLogin }) => {
 
         {/* Signup Form */}
         <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-2xl p-8">
+          {errors.general && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm">
+              {errors.general}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Name Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

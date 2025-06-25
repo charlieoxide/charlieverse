@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Shield, ArrowLeft } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface LoginProps {
   onBack: () => void;
   onSwitchToSignup: () => void;
+  onSuccess: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onBack, onSwitchToSignup }) => {
+const Login: React.FC<LoginProps> = ({ onBack, onSwitchToSignup, onSuccess }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -14,6 +16,8 @@ const Login: React.FC<LoginProps> = ({ onBack, onSwitchToSignup }) => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const { login } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -26,13 +30,16 @@ const Login: React.FC<LoginProps> = ({ onBack, onSwitchToSignup }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    console.log('Login attempt:', formData);
-    setIsLoading(false);
-    // Handle successful login here
+    try {
+      await login(formData.email, formData.password);
+      onSuccess();
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -70,6 +77,11 @@ const Login: React.FC<LoginProps> = ({ onBack, onSwitchToSignup }) => {
 
         {/* Login Form */}
         <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-2xl p-8">
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm">
+              {error}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div>
