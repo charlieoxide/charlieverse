@@ -76,7 +76,6 @@
 
   * {
     border-color: hsl(var(--border));
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   }
 
   body {
@@ -174,6 +173,11 @@ a, button, input, textarea, select {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Global theme transitions */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
 /* Staggered animations for multiple elements */
 .stagger-animation > * {
   animation-delay: calc(var(--animation-order, 0) * 0.1s);
@@ -210,25 +214,28 @@ a, button, input, textarea, select {
   }
 }
 
-/* Animated theme toggle icons */
-.sun-icon {
-  transform: rotate(0deg);
-  transition: transform 0.3s ease, opacity 0.3s ease;
+/* Enhanced theme animations */
+.animate-theme-change {
+  animation: themeChange 0.3s ease-in-out;
 }
 
-.moon-icon {
-  transform: rotate(90deg);
-  transition: transform 0.3s ease, opacity 0.3s ease;
+@keyframes themeChange {
+  0% { opacity: 0.8; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
 }
 
-.dark .sun-icon {
-  transform: rotate(-90deg);
-  opacity: 0;
+/* Smooth color transitions for cards and backgrounds */
+.bg-card, .bg-background, .bg-muted, .bg-accent {
+  transition: background-color 0.3s ease !important;
 }
 
-.dark .moon-icon {
-  transform: rotate(0deg);
-  opacity: 1;
+.text-foreground, .text-muted-foreground, .text-accent-foreground {
+  transition: color 0.3s ease !important;
+}
+
+.border-border, .border-accent, .border-muted {
+  transition: border-color 0.3s ease !important;
 }
 
 /* Smooth background gradients */

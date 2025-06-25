@@ -33,9 +33,6 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement;
 
-    // Add transition class for smooth theme changes
-    root.style.setProperty('transition', 'background-color 0.3s ease, color 0.3s ease');
-
     root.classList.remove('light', 'dark');
 
     if (theme === 'system') {
@@ -44,14 +41,14 @@ export function ThemeProvider({
         ? 'dark'
         : 'light';
 
-      // Add a small delay to ensure smooth transition
+      // Add smooth transition for system theme
       requestAnimationFrame(() => {
         root.classList.add(systemTheme);
       });
       return;
     }
 
-    // Add a small delay to ensure smooth transition
+    // Add smooth transition for manual theme
     requestAnimationFrame(() => {
       root.classList.add(theme);
     });
