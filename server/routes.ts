@@ -136,7 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create new user from Firebase data
         const nameParts = displayName ? displayName.split(' ') : ['', ''];
         // Check if this is an admin email
-        const isAdminEmail = email === 'admin@charlieverse.com' || email === 'crbond777@gmail.com';
+        const isAdminEmail = email === 'admin@charlieverse.com';
         
         user = await storage.createUser({
           email,
