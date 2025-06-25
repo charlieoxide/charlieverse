@@ -47,41 +47,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Try to connect to PostgreSQL
   const dbConnected = await connectDB();
   
-  // Create admin user if it doesn't exist
-  if (dbConnected) {
-    const { createAdminUser } = await import('./seedAdmin');
-    setTimeout(() => createAdminUser(), 2000);
-  } else {
-    console.log('Database connection failed - please check DATABASE_URL');
-    // Create default admin user for in-memory storage
-    setTimeout(async () => {
-      try {
-        const users = await storage.getAllUsers();
-        if (users.length === 0) {
-          const adminUser = await storage.createUser({
-            email: 'admin@charlieverse.com',
-            password: 'admin123',
-            firstName: 'Admin',
-            lastName: 'User',
-            role: 'admin'
-          });
-          console.log('Default admin user created: admin@charlieverse.com / admin123');
-          
-          // Send welcome email if configured
-          if (emailService.isEmailServiceConfigured()) {
-            await emailService.sendWelcomeEmail(adminUser);
-          }
-        }
-      } catch (error) {
-        console.error('Error creating admin user:', error);
-      }
-    }, 1000);
-  }
+  // Note: Admin user will be created automatically when admin@charlieverse.com first logs in with Firebase
+  console.log('Admin user (admin@charlieverse.com) will be created automatically on first Firebase login');
 
   // Firebase sync route
   app.post('/api/auth/sync-firebase', async (req, res) => {
     try {
-      const { firebaseUid, email, displayName } = req.body;
+      const { firebaseUid, email, displayName, firstName, lastName, phone, company, bio } = req.body;
       
       // Check if user already exists
       let user = await storage.getUserByEmail(email);
@@ -89,18 +61,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         // Create new user from Firebase data
         const nameParts = displayName ? displayName.split(' ') : ['', ''];
-        // Check if this is the first user or specific admin email - make them admin
-        const isFirstUser = (await storage.getAllUsers()).length === 0;
-        const isAdminEmail = email === 'admin@charlieverse.com' || email === 'crbond777@gmail.com';
+        // Check if this is admin email
+        const isAdminEmail = email === 'admin@charlieverse.com';
         
         user = await storage.createUser({
           email,
           password: '', // Firebase handles auth, no local password needed
-          firstName: nameParts[0] || 'User',
-          lastName: nameParts[1] || '',
+          firstName: firstName || nameParts[0] || 'User',
+          lastName: lastName || nameParts[1] || '',
+          phone: phone || '',
+          company: company || '',
+          bio: bio || '',
           firebaseUid,
-          role: (isFirstUser || isAdminEmail) ? 'admin' : 'user'
+          role: isAdminEmail ? 'admin' : 'user'
         });
+        
+        // Send welcome email
+        if (emailService.isEmailServiceConfigured()) {
+          await emailService.sendWelcomeEmail(user);
+        }
+        
+        // Notify admins of new user registration
+        if (wsManager) {
+          wsManager.sendUserAction('registration', user.id.toString(), {
+            email: user.email,
+            name: `${user.firstName} ${user.lastName}`
+          });
+        }
       }
 
       // Create session
