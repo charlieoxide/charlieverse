@@ -141,9 +141,11 @@ export default function UserPanel({ onBack }: UserPanelProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background theme-transition">
+    <div className="min-h-screen panel-background theme-transition">
+      {/* Background Grid Pattern */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-40 pointer-events-none"></div>
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <header className="relative bg-card/80 backdrop-blur-sm shadow-sm border-b border-border card-transition">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -172,10 +174,10 @@ export default function UserPanel({ onBack }: UserPanelProps) {
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Navigation */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex space-x-8 border-b border-gray-200 mb-6">
           <button
             onClick={() => setActiveTab('dashboard')}
