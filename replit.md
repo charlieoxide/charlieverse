@@ -111,6 +111,9 @@ The application follows a three-tier architecture:
 ✓ Added smooth animations for theme transitions
 ✓ Applied theme variables across all components and panels
 ✓ Fixed admin login functionality - working correctly
+✓ Integrated Firebase authentication for user accounts
+✓ Set up Firebase sync with backend database
+✓ Updated admin credentials and user management system
 
 ## Changelog
 
