@@ -3,6 +3,11 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import bcrypt from "bcrypt";
 import connectDB from "./database";
+import WebSocketManager from './websocket.js';
+import { upload, processImage, validateFile, getFileInfo, getFileCategory, type FileMetadata } from './fileUpload.js';
+import { AnalyticsService } from './analytics.js';
+import emailService from './email.js';
+import path from 'path';
 
 // Session middleware setup
 declare module "express-session" {
@@ -31,6 +36,14 @@ const requireAdmin = (req: any, res: any, next: any) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const server = createServer(app);
+  
+  // Initialize WebSocket manager
+  const wsManager = new WebSocketManager(server);
+  
+  // Initialize analytics service
+  const analyticsService = new AnalyticsService(storage);
+
   // Try to connect to PostgreSQL
   const dbConnected = await connectDB();
   
@@ -271,6 +284,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         contactMethod
       });
       
+      // Notify admins of new project
+      wsManager.sendUserAction('project_created', req.session.userId!, {
+        projectId: project.id,
+        title: project.title,
+        type: project.projectType,
+        budget: project.budget
+      });
+      
+      // Send email notification to admins
+      if (emailService.isEmailServiceConfigured()) {
+        const user = await storage.getUserByEmail(req.session.userEmail!);
+        if (user) {
+          await emailService.sendNewProjectNotification('admin@charlieverse.com', project, user);
+        }
+      }
+      
       res.json(project);
     } catch (error) {
       console.error("Create project error:", error);
@@ -332,11 +361,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch('/api/admin/projects/:id/status', requireAuth, requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { status } = req.body;
+      const { status, message } = req.body;
       const project = await storage.updateProjectStatus(parseInt(id), status);
       if (!project) {
         return res.status(404).json({ message: 'Project not found' });
       }
+      
+      // Send real-time notification to project owner
+      wsManager.sendProjectUpdate(id, project.userId.toString(), { 
+        title: project.title, 
+        status,
+        message: message || `Project status updated to ${status}`
+      });
+      
+      // Send email notification to project owner
+      if (emailService.isEmailServiceConfigured()) {
+        const user = await storage.getUserByEmail(project.userId.email);
+        if (user) {
+          await emailService.sendProjectStatusUpdate(user, project, status, message || `Your project status has been updated to ${status}`);
+        }
+      }
+      
       res.json(project);
     } catch (error) {
       console.error('Error updating project status:', error);
@@ -406,6 +451,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  // Enhanced Features - File Upload Routes
+  app.post('/api/files/upload', requireAuth, upload.array('files', 5), async (req, res) => {
+    try {
+      if (!req.files || !Array.isArray(req.files)) {
+        return res.status(400).json({ message: 'No files uploaded' });
+      }
+
+      const fileMetadata: FileMetadata[] = [];
+      
+      for (const file of req.files) {
+        const validation = validateFile(file);
+        if (!validation.valid) {
+          return res.status(400).json({ message: validation.error });
+        }
+
+        const metadata: FileMetadata = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          originalName: file.originalname,
+          filename: file.filename,
+          mimetype: file.mimetype,
+          size: file.size,
+          category: getFileCategory(file.mimetype),
+          uploadedBy: req.session.userId!,
+          uploadedAt: new Date(),
+          projectId: req.body.projectId,
+          description: req.body.description
+        };
+
+        fileMetadata.push(metadata);
+
+        // Process images
+        if (file.mimetype.startsWith('image/')) {
+          try {
+            await processImage(file.path);
+          } catch (error) {
+            console.error('Image processing error:', error);
+          }
+        }
+      }
+
+      // Notify admins of file upload
+      wsManager.sendUserAction('file_upload', req.session.userId!, {
+        fileCount: fileMetadata.length,
+        projectId: req.body.projectId
+      });
+
+      res.json({ files: fileMetadata });
+    } catch (error) {
+      console.error('File upload error:', error);
+      res.status(500).json({ message: 'File upload failed' });
+    }
+  });
+
+  app.get('/api/files/:filename', (req, res) => {
+    const filename = req.params.filename;
+    const filePath = path.join(process.cwd(), 'uploads', filename);
+    res.sendFile(filePath);
+  });
+
+  app.get('/api/files/:filename/info', async (req, res) => {
+    try {
+      const info = await getFileInfo(req.params.filename);
+      res.json(info);
+    } catch (error) {
+      res.status(404).json({ message: 'File not found' });
+    }
+  });
+
+  // Analytics Routes
+  app.get('/api/analytics/dashboard', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const analytics = await analyticsService.getAnalyticsData();
+      res.json(analytics);
+    } catch (error) {
+      console.error('Analytics error:', error);
+      res.status(500).json({ message: 'Failed to get analytics data' });
+    }
+  });
+
+  app.get('/api/analytics/projects/:id', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const analytics = await analyticsService.getProjectAnalytics(req.params.id);
+      if (!analytics) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      res.json(analytics);
+    } catch (error) {
+      console.error('Project analytics error:', error);
+      res.status(500).json({ message: 'Failed to get project analytics' });
+    }
+  });
+
+  // Email Configuration Routes
+  app.get('/api/email/status', requireAuth, requireAdmin, (req, res) => {
+    res.json({ 
+      configured: emailService.isEmailServiceConfigured(),
+      message: emailService.isEmailServiceConfigured() 
+        ? 'Email service is configured and ready'
+        : 'Email service not configured - add SMTP credentials to environment variables'
+    });
+  });
+
+  app.post('/api/email/test', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { to, subject, message } = req.body;
+      const success = await emailService.sendEmail({
+        to,
+        subject: subject || 'Test Email from Charlieverse',
+        html: `<p>${message || 'This is a test email from your Charlieverse application.'}</p>`,
+        text: message || 'This is a test email from your Charlieverse application.'
+      });
+
+      res.json({ 
+        success,
+        message: success ? 'Test email sent successfully' : 'Failed to send test email'
+      });
+    } catch (error) {
+      console.error('Test email error:', error);
+      res.status(500).json({ message: 'Failed to send test email' });
+    }
+  });
+
+  // WebSocket Status Route
+  app.get('/api/websocket/status', requireAuth, requireAdmin, (req, res) => {
+    res.json({
+      connectedUsers: wsManager.getConnectedUsersCount(),
+      isUserOnline: (userId: string) => wsManager.isUserOnline(userId)
+    });
+  });
+
+  // Real-time notification routes
+  app.post('/api/notifications/send', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { type, title, message, userId, broadcast } = req.body;
+      
+      const notification = {
+        type: type || 'system_alert',
+        title,
+        message,
+        timestamp: new Date(),
+        data: req.body.data
+      };
+
+      if (broadcast) {
+        wsManager.broadcast(notification);
+      } else if (userId) {
+        wsManager.sendToUser(userId, notification);
+      } else {
+        wsManager.sendToAdmins(notification);
+      }
+
+      res.json({ success: true, message: 'Notification sent' });
+    } catch (error) {
+      console.error('Notification send error:', error);
+      res.status(500).json({ message: 'Failed to send notification' });
+    }
+  });
+
+  return server;
 }
