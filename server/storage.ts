@@ -48,10 +48,9 @@ export class PostgreSQLStorage implements IStorage {
 
   async getUserByEmail(email: string): Promise<User | null> {
     if (!useDatabase) {
-      for (const user of this.fallbackUsers.values()) {
-        if (user.email === email) return user;
-      }
-      return null;
+      const userArray = Array.from(this.fallbackUsers.values());
+      const user = userArray.find(u => u.email === email);
+      return user || null;
     }
     
     try {
@@ -59,10 +58,9 @@ export class PostgreSQLStorage implements IStorage {
       return result[0] || null;
     } catch (error) {
       console.error('Error getting user by email:', error);
-      for (const user of this.fallbackUsers.values()) {
-        if (user.email === email) return user;
-      }
-      return null;
+      const userArray = Array.from(this.fallbackUsers.values());
+      const user = userArray.find(u => u.email === email);
+      return user || null;
     }
   }
 
@@ -72,6 +70,7 @@ export class PostgreSQLStorage implements IStorage {
         id: this.userIdCounter++,
         ...userData,
         role: userData.role || 'user',
+        profilePicture: null,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -89,6 +88,7 @@ export class PostgreSQLStorage implements IStorage {
         id: this.userIdCounter++,
         ...userData,
         role: userData.role || 'user',
+        profilePicture: null,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date()
@@ -150,9 +150,14 @@ export class PostgreSQLStorage implements IStorage {
       const project: Project = {
         id: this.projectIdCounter++,
         ...projectData,
-        status: projectData.status || 'pending',
-        priority: projectData.priority || 'medium',
+        status: 'pending',
+        priority: 'medium',
         contactMethod: projectData.contactMethod || 'email',
+        estimatedCost: null,
+        actualCost: null,
+        startDate: null,
+        endDate: null,
+        completedAt: null,
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -168,9 +173,14 @@ export class PostgreSQLStorage implements IStorage {
       const project: Project = {
         id: this.projectIdCounter++,
         ...projectData,
-        status: projectData.status || 'pending',
-        priority: projectData.priority || 'medium',
+        status: 'pending',
+        priority: 'medium',
         contactMethod: projectData.contactMethod || 'email',
+        estimatedCost: null,
+        actualCost: null,
+        startDate: null,
+        endDate: null,
+        completedAt: null,
         createdAt: new Date(),
         updatedAt: new Date()
       };
