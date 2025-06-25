@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, Shield } from 'lucide-react';
 
-import { useAuth } from '../context/AuthContext';
-
 interface HeaderProps {
   onAuthClick: () => void;
 }
@@ -10,7 +8,6 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onAuthClick }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const { currentUser } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -58,9 +55,9 @@ const Header: React.FC<HeaderProps> = ({ onAuthClick }) => {
             ))}
             <button 
               onClick={onAuthClick}
-              className="bg-gradient-to-r from-cyan-500 to-purple-600 text-white px-6 py-2 rounded-full font-semibold hover:from-cyan-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
+              className="bg-gradient-to-r from-cyan-500 to-purple-600 text-white px-6 py-2 rounded-full font-semibold hover:shadow-lg transition-all duration-200"
             >
-              {currentUser ? 'Profile' : 'Sign In'}
+              Sign In
             </button>
           </nav>
 

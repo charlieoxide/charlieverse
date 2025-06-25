@@ -16,16 +16,14 @@ interface AuthContextType {
   loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  currentUser: null,
-  login: async () => {},
-  signup: async () => {},
-  logout: async () => {},
-  loading: true
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }
 
 async function apiRequest(url: string, options: RequestInit = {}) {

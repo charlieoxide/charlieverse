@@ -8,11 +8,11 @@ import Contact from './components/Contact';
 import Footer from './components/Footer';
 import AuthWrapper from './components/AuthWrapper';
 import UserProfile from './components/UserProfile';
-import { useAuth } from './context/AuthContext';
 
 function AppContent() {
   const [currentView, setCurrentView] = useState<'home' | 'auth' | 'profile'>('home');
-  const { currentUser, loading } = useAuth();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
   const showAuth = () => setCurrentView('auth');
   const showHome = () => setCurrentView('home');
@@ -46,8 +46,8 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <Header onAuthClick={currentUser ? showProfile : showAuth} />
-      <Hero onAuthClick={currentUser ? showProfile : showAuth} />
+      <Header onAuthClick={showAuth} />
+      <Hero onAuthClick={showAuth} />
       <Services />
       <About />
       <Testimonials />
