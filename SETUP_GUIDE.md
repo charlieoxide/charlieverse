@@ -44,122 +44,22 @@ The project uses these main dependencies (already in package.json):
 - `tailwindcss` - CSS framework
 - `@tanstack/react-query` - Data fetching
 
-## 2. PostgreSQL Database Setup
+## 2. Simple In-Memory Storage Setup
 
-### Option A: Local PostgreSQL Installation
+The application now uses simple in-memory storage - no database setup required!
 
-1. **Install PostgreSQL:**
+Just create a `.env` file in project root:
 
-**Windows:**
-```bash
-# Download from https://www.postgresql.org/download/windows/
-# Or use Chocolatey
-choco install postgresql
-```
-
-**macOS:**
-```bash
-# Using Homebrew
-brew install postgresql
-brew services start postgresql
-```
-
-**Ubuntu/Debian:**
-```bash
-sudo apt update
-sudo apt install postgresql postgresql-contrib
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-```
-
-2. **Create Database and User:**
-
-```bash
-# Connect to PostgreSQL
-sudo -u postgres psql
-
-# Create database and user
-CREATE DATABASE charlieverse;
-CREATE USER charlieverse_user WITH PASSWORD 'your_secure_password';
-GRANT ALL PRIVILEGES ON DATABASE charlieverse TO charlieverse_user;
-\q
-```
-
-3. **Set Environment Variable:**
-
-Create `.env` file in project root:
 ```env
-DATABASE_URL=postgresql://charlieverse_user:your_secure_password@localhost:5432/charlieverse
+# Session Secret (generate a secure random string)
 SESSION_SECRET=your_very_secure_session_secret_here
 ```
 
-### Option B: Cloud PostgreSQL (Neon/Supabase)
+**Note:** Data will reset when the server restarts, but this makes setup much simpler for development and testing.
 
-**Using Neon (Recommended):**
+## 3. No Database Setup Required!
 
-1. Go to https://neon.tech
-2. Create free account
-3. Create new project
-4. Copy connection string
-5. Add to `.env`:
-
-```env
-DATABASE_URL=postgresql://username:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
-SESSION_SECRET=your_very_secure_session_secret_here
-```
-
-**Using Supabase:**
-
-1. Go to https://supabase.com
-2. Create project
-3. Get connection string from Settings > Database
-4. Add to `.env`
-
-### Option C: Docker PostgreSQL (Quick Setup)
-
-Create `docker-compose.yml`:
-
-```yaml
-version: '3.8'
-services:
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: charlieverse
-      POSTGRES_USER: charlieverse_user
-      POSTGRES_PASSWORD: your_secure_password
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
-```
-
-Run:
-```bash
-docker-compose up -d
-```
-
-Add to `.env`:
-```env
-DATABASE_URL=postgresql://charlieverse_user:your_secure_password@localhost:5432/charlieverse
-SESSION_SECRET=your_very_secure_session_secret_here
-```
-
-## 3. Database Schema Setup
-
-After setting up PostgreSQL and environment variables:
-
-```bash
-# Push database schema
-npm run db:push
-
-# Verify schema was created
-npx drizzle-kit studio
-# This opens a web interface to view your database
-```
+Since we're using in-memory storage, no database setup is needed. The application will automatically create sample data when it starts.
 
 ## 4. Development Setup
 

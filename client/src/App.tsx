@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import Services from './components/Services';
@@ -7,22 +8,25 @@ import Testimonials from './components/Testimonials';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 import AuthWrapper from './components/AuthWrapper';
-import UserProfile from './components/UserProfile';
-import AdminDashboard from './components/AdminDashboard';
+import UserPanel from './components/UserPanel';
+import AdminPanel from './components/AdminPanel';
 import LoadingSpinner from './components/LoadingSpinner';
-import { useAuth } from './context/AuthContext';
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState<'home' | 'auth' | 'profile' | 'admin'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'auth' | 'user' | 'admin'>('home');
   const { currentUser, loading } = useAuth();
 
   const showAuth = () => setCurrentView('auth');
   const showHome = () => setCurrentView('home');
-  const showProfile = () => setCurrentView('profile');
-  const showAdmin = () => setCurrentView('admin');
+  const showUserPanel = () => setCurrentView('user');
+  const showAdminPanel = () => setCurrentView('admin');
 
   const handleAuthSuccess = () => {
-    setCurrentView('profile');
+    if (currentUser?.role === 'admin') {
+      setCurrentView('admin');
+    } else {
+      setCurrentView('user');
+    }
   };
 
   if (loading) {
@@ -33,33 +37,49 @@ function AppContent() {
     return <AuthWrapper onBack={showHome} onSuccess={handleAuthSuccess} />;
   }
 
-  if (currentView === 'profile' && currentUser) {
-    return <UserProfile />;
+  if (currentView === 'user' && currentUser) {
+    return <UserPanel />;
   }
 
   if (currentView === 'admin' && currentUser?.role === 'admin') {
-    return <AdminDashboard />;
+    return <AdminPanel />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-white">
       <Header 
-        onAuthClick={currentUser ? showProfile : showAuth}
-        onAdminClick={currentUser?.role === 'admin' ? showAdmin : undefined}
+        onAuthClick={() => {
+          if (currentUser) {
+            if (currentUser.role === 'admin') {
+              showAdminPanel();
+            } else {
+              showUserPanel();
+            }
+          } else {
+            showAuth();
+          }
+        }}
+        onAdminClick={currentUser?.role === 'admin' ? showAdminPanel : undefined}
         currentUser={currentUser}
       />
-      <Hero onAuthClick={currentUser ? showProfile : showAuth} />
-      <Services />
-      <About />
-      <Testimonials />
-      <Contact />
+      <main>
+        <Hero onAuthClick={showAuth} />
+        <Services />
+        <About />
+        <Testimonials />
+        <Contact />
+      </main>
       <Footer />
     </div>
   );
 }
 
 function App() {
-  return <AppContent />;
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
 }
 
 export default App;

@@ -209,7 +209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes
-  app.get("/api/admin/users", requireAdmin, async (req, res) => {
+  app.get("/api/admin/users", requireAuth, requireAdmin, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -219,13 +219,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/projects", requireAdmin, async (req, res) => {
+  app.get("/api/admin/projects", requireAuth, requireAdmin, async (req, res) => {
     try {
       const projects = await storage.getAllProjects();
       res.json(projects);
     } catch (error) {
       console.error("Get all projects error:", error);
       res.status(500).json({ message: "Failed to get projects" });
+    }
+  });
+
+  app.patch('/api/admin/projects/:id/status', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const project = await storage.updateProjectStatus(parseInt(id), status);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      res.json(project);
+    } catch (error) {
+      console.error('Error updating project status:', error);
+      res.status(500).json({ message: 'Failed to update project status' });
+    }
+  });
+
+  app.patch('/api/admin/users/:id/status', requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      const user = await storage.updateUser(parseInt(id), { isActive });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      res.status(500).json({ message: 'Failed to update user status' });
     }
   });
 
