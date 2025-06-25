@@ -53,13 +53,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         // Create new user from Firebase data
         const nameParts = displayName ? displayName.split(' ') : ['', ''];
+        // Check if this is the first user or specific admin email - make them admin
+        const isFirstUser = (await storage.getAllUsers()).length === 0;
+        const isAdminEmail = email === 'admin@charlieverse.com' || email === 'crbond777@gmail.com';
+        
         user = await storage.createUser({
           email,
           password: '', // Firebase handles auth, no local password needed
           firstName: nameParts[0] || 'User',
           lastName: nameParts[1] || '',
           firebaseUid,
-          role: 'user'
+          role: (isFirstUser || isAdminEmail) ? 'admin' : 'user'
         });
       }
 
@@ -131,13 +135,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!user) {
         // Create new user from Firebase data
         const nameParts = displayName ? displayName.split(' ') : ['', ''];
+        // Check if this is an admin email
+        const isAdminEmail = email === 'admin@charlieverse.com' || email === 'crbond777@gmail.com';
+        
         user = await storage.createUser({
           email,
           password: '', // Firebase handles auth, no local password needed
           firstName: nameParts[0] || 'User',
           lastName: nameParts[1] || '',
           firebaseUid,
-          role: 'user'
+          role: isAdminEmail ? 'admin' : 'user'
         });
       }
 
@@ -177,6 +184,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get user error:", error);
       res.status(500).json({ message: "Failed to get user" });
+    }
+  });
+
+  // Admin route to upgrade user to admin
+  app.post("/api/auth/make-admin", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (email === 'crbond777@gmail.com') {
+        const user = await storage.getUserByEmail(email);
+        if (user) {
+          const updatedUser = await storage.updateUser(user.id, { role: 'admin' });
+          res.json({ message: 'User upgraded to admin', user: updatedUser });
+        } else {
+          res.status(404).json({ message: 'User not found' });
+        }
+      } else {
+        res.status(403).json({ message: 'Unauthorized' });
+      }
+    } catch (error) {
+      console.error('Admin upgrade error:', error);
+      res.status(500).json({ message: 'Failed to upgrade user' });
     }
   });
 
