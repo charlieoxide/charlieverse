@@ -642,6 +642,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing required fields" });
       }
       
+      // Store contact message in database
+      const contactMessage = await storage.createContactMessage({
+        name,
+        email,
+        phone,
+        projectType,
+        message
+      });
+
       // Send email notification to admin if configured
       if (emailService.isEmailServiceConfigured()) {
         try {
@@ -667,20 +676,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         console.log('Email service not configured - contact form data logged only');
       }
-      
+
       // Send notification via WebSocket to admins
       wsManager.sendToAdmins({
         type: 'user_action',
         title: 'New Contact Form Submission',
         message: `${name} submitted a contact form for ${projectType}`,
         timestamp: new Date(),
-        data: { name, email, phone, projectType, message }
+        data: contactMessage
       });
       
       res.json({ message: "Contact form submitted successfully" });
     } catch (error) {
       console.error("Contact form error:", error);
       res.status(500).json({ message: "Failed to submit contact form" });
+    }
+  });
+
+  // Contact messages management endpoints
+  app.get("/api/admin/contacts", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const contacts = await storage.getAllContactMessages();
+      console.log('Admin fetching contact messages:', contacts.length, 'messages found');
+      res.json(contacts);
+    } catch (error) {
+      console.error("Get contact messages error:", error);
+      res.status(500).json({ message: "Failed to get contact messages" });
+    }
+  });
+
+  app.patch("/api/admin/contacts/:id", requireAuth, requireAdmin, async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const updatedContact = await storage.updateContactMessage(contactId, updates);
+      if (!updatedContact) {
+        return res.status(404).json({ message: "Contact message not found" });
+      }
+      
+      res.json(updatedContact);
+    } catch (error) {
+      console.error("Update contact message error:", error);
+      res.status(500).json({ message: "Failed to update contact message" });
     }
   });
 

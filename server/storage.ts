@@ -1,5 +1,18 @@
 import type { InsertUser, User, InsertProject, Project, ProjectUpdate, UpdateUser } from '../shared/schema';
 
+export interface ContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  projectType: string;
+  message: string;
+  status: 'new' | 'read' | 'replied' | 'archived';
+  createdAt: string;
+  repliedAt?: string;
+  adminNotes?: string;
+}
+
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | null>;
@@ -18,15 +31,22 @@ export interface IStorage {
   // Project updates
   addProjectUpdate(update: any): Promise<ProjectUpdate>;
   getProjectUpdates(projectId: number): Promise<ProjectUpdate[]>;
+  
+  // Contact messages
+  createContactMessage(message: Omit<ContactMessage, 'id' | 'status' | 'createdAt'>): Promise<ContactMessage>;
+  getAllContactMessages(): Promise<ContactMessage[]>;
+  updateContactMessage(id: number, updates: Partial<ContactMessage>): Promise<ContactMessage | null>;
 }
 
 export class InMemoryStorage implements IStorage {
   private users = new Map<number, User>();
   private projects = new Map<number, Project>();
   private updates = new Map<number, ProjectUpdate>();
+  private contactMessages = new Map<number, ContactMessage>();
   private userIdCounter = 1;
   private projectIdCounter = 1;
   private updateIdCounter = 1;
+  private contactIdCounter = 1;
 
   constructor() {
     console.log('In-memory storage initialized - no database required');
