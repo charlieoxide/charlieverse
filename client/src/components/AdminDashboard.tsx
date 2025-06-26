@@ -14,17 +14,18 @@ interface User {
 }
 
 interface Project {
-  _id: string;
+  _id?: string;
+  id?: number;
   title: string;
   description: string;
   projectType: string;
   budget: string;
   timeline: string;
   status: string;
-  estimatedCost: number;
-  actualCost: number;
-  startDate: string;
-  endDate: string;
+  estimatedCost?: number;
+  actualCost?: number;
+  startDate?: string;
+  endDate?: string;
   createdAt: string;
   userId: User;
 }
@@ -233,37 +234,49 @@ const AdminDashboard: React.FC = () => {
           {/* Projects Table */}
           <div className="bg-gray-800 rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-6">Project Management</h2>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
-              {projects.map((project) => (
-                <div key={project._id} className="border border-gray-700 rounded-lg p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold">{project.title}</h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
-                      {project.status}
-                    </span>
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+              </div>
+            ) : projects.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No projects found</p>
+                <p className="text-sm">Projects will appear here when users submit requests</p>
+              </div>
+            ) : (
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {projects.map((project) => (
+                  <div key={project._id || project.id} className="border border-gray-700 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-semibold">{project.title || 'Untitled Project'}</h3>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                        {project.status || 'pending'}
+                      </span>
+                    </div>
+                    <p className="text-gray-400 text-sm mb-2">
+                      Client: {project.userId?.firstName || 'Unknown'} {project.userId?.lastName || 'User'}
+                    </p>
+                    <p className="text-gray-300 text-sm mb-3">{project.description || 'No description provided'}</p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-400">
+                        {project.projectType || 'General'} • {project.budget || 'Budget TBD'}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setSelectedProject(project);
+                          setShowProjectModal(true);
+                        }}
+                        className="text-cyan-400 hover:text-cyan-300 text-sm flex items-center space-x-1"
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span>Manage</span>
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-gray-400 text-sm mb-2">
-                    Client: {project.userId.firstName} {project.userId.lastName}
-                  </p>
-                  <p className="text-gray-300 text-sm mb-3">{project.description}</p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-400">
-                      {project.projectType} • {project.budget}
-                    </span>
-                    <button
-                      onClick={() => {
-                        setSelectedProject(project);
-                        setShowProjectModal(true);
-                      }}
-                      className="text-cyan-400 hover:text-cyan-300 text-sm flex items-center space-x-1"
-                    >
-                      <Edit className="h-4 w-4" />
-                      <span>Manage</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -310,13 +323,19 @@ const AdminDashboard: React.FC = () => {
                   <h3 className="font-semibold mb-4">Update Status</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <button
-                      onClick={() => updateProjectStatus(selectedProject._id, 'in-progress')}
+                      onClick={() => {
+                        const projectId = selectedProject._id || selectedProject.id?.toString();
+                        if (projectId) updateProjectStatus(projectId, 'in_progress');
+                      }}
                       className="bg-blue-600 hover:bg-blue-700 py-2 rounded-lg"
                     >
                       Start Project
                     </button>
                     <button
-                      onClick={() => updateProjectStatus(selectedProject._id, 'completed')}
+                      onClick={() => {
+                        const projectId = selectedProject._id || selectedProject.id?.toString();
+                        if (projectId) updateProjectStatus(projectId, 'completed');
+                      }}
                       className="bg-green-600 hover:bg-green-700 py-2 rounded-lg"
                     >
                       Mark Complete

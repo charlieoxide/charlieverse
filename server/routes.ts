@@ -403,13 +403,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/projects", requireAuth, requireAdmin, async (req, res) => {
     try {
       const projects = await storage.getAllProjects();
+      console.log('Admin fetching projects:', projects.length, 'projects found');
       
       // Add user information to each project for admin view
       const projectsWithUserInfo = [];
       for (const project of projects) {
         const user = await storage.getUser(project.userId);
+        console.log('Project:', project.id, 'User:', user ? user.email : 'not found');
         projectsWithUserInfo.push({
           ...project,
+          _id: project.id.toString(), // Add _id for compatibility
           userId: user ? {
             _id: project.userId.toString(),
             email: user.email || 'Unknown',
@@ -432,6 +435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      console.log('Returning projects with user info:', projectsWithUserInfo.length);
       res.json(projectsWithUserInfo);
     } catch (error) {
       console.error("Get all projects error:", error);
