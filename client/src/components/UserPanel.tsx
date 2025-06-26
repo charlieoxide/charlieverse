@@ -72,8 +72,8 @@ export default function UserPanel({ onBack }: UserPanelProps) {
   useEffect(() => {
     fetchProjects();
     
-    // Set up polling to check for project updates every 5 seconds
-    const interval = setInterval(fetchProjects, 5000);
+    // Set up more frequent polling to check for project updates every 2 seconds
+    const interval = setInterval(fetchProjects, 2000);
     return () => clearInterval(interval);
   }, []);
 
@@ -83,9 +83,15 @@ export default function UserPanel({ onBack }: UserPanelProps) {
 
   const fetchProjects = async () => {
     try {
-      const response = await fetch('/api/projects');
+      const response = await fetch('/api/projects', {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
       if (response.ok) {
         const data = await response.json();
+        console.log('User fetched projects:', data.length, 'projects');
         setProjects(data);
       }
     } catch (error) {

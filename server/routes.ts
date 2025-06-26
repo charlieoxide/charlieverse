@@ -362,6 +362,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projects", requireAuth, async (req, res) => {
     try {
       const projects = await storage.getProjectsByUser(parseInt(req.session.userId!));
+      
+      // Add no-cache headers to prevent caching issues
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      });
+      
+      console.log(`User ${req.session.userId} fetching projects:`, projects.length, 'projects found');
       res.json(projects);
     } catch (error) {
       console.error("Get projects error:", error);
