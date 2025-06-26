@@ -630,6 +630,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Contact form endpoint
+  app.post("/api/contact", async (req, res) => {
+    try {
+      const { name, email, phone, projectType, message } = req.body;
+      
+      console.log('Contact form submission received:', { name, email, projectType });
+      
+      // Validate required fields
+      if (!name || !email || !projectType || !message) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Send email notification to admin if configured
+      if (emailService.isEmailServiceConfigured()) {
+        try {
+          await emailService.sendEmail({
+            to: 'admin@charlieverse.com',
+            subject: `New Contact Form Submission - ${projectType}`,
+            html: `
+              <h2>New Contact Form Submission</h2>
+              <p><strong>Name:</strong> ${name}</p>
+              <p><strong>Email:</strong> ${email}</p>
+              <p><strong>Phone:</strong> ${phone || 'Not provided'}</p>
+              <p><strong>Project Type:</strong> ${projectType}</p>
+              <p><strong>Message:</strong></p>
+              <p>${message}</p>
+            `,
+            text: `New Contact Form Submission\n\nName: ${name}\nEmail: ${email}\nPhone: ${phone || 'Not provided'}\nProject Type: ${projectType}\nMessage: ${message}`
+          });
+          console.log('Contact form email sent successfully');
+        } catch (emailError) {
+          console.error('Failed to send contact email:', emailError);
+          // Continue anyway - don't fail the contact form submission
+        }
+      } else {
+        console.log('Email service not configured - contact form data logged only');
+      }
+      
+      // Send notification via WebSocket to admins
+      wsManager.sendToAdmins({
+        type: 'user_action',
+        title: 'New Contact Form Submission',
+        message: `${name} submitted a contact form for ${projectType}`,
+        timestamp: new Date(),
+        data: { name, email, phone, projectType, message }
+      });
+      
+      res.json({ message: "Contact form submitted successfully" });
+    } catch (error) {
+      console.error("Contact form error:", error);
+      res.status(500).json({ message: "Failed to submit contact form" });
+    }
+  });
+
   // Email Configuration Routes
   app.get('/api/email/status', requireAuth, requireAdmin, (req, res) => {
     res.json({ 
