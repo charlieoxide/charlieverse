@@ -71,6 +71,10 @@ export default function UserPanel({ onBack }: UserPanelProps) {
 
   useEffect(() => {
     fetchProjects();
+    
+    // Set up polling to check for project updates every 5 seconds
+    const interval = setInterval(fetchProjects, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -79,7 +83,7 @@ export default function UserPanel({ onBack }: UserPanelProps) {
 
   const fetchProjects = async () => {
     try {
-      const response = await fetch('/api/user/projects');
+      const response = await fetch('/api/projects');
       if (response.ok) {
         const data = await response.json();
         setProjects(data);
@@ -150,7 +154,7 @@ export default function UserPanel({ onBack }: UserPanelProps) {
   const handleQuoteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/user/quotes', {
+      const response = await fetch('/api/projects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

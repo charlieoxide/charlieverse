@@ -361,7 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/projects", requireAuth, async (req, res) => {
     try {
-      const projects = await storage.getProjectsByUser(req.session.userId!);
+      const projects = await storage.getProjectsByUser(parseInt(req.session.userId!));
       res.json(projects);
     } catch (error) {
       console.error("Get projects error:", error);
@@ -371,14 +371,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/projects/:id", requireAuth, async (req, res) => {
     try {
-      const project = await storage.getProject(req.params.id);
+      const project = await storage.getProject(parseInt(req.params.id));
       
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
       
       // Check if user owns the project or is admin
-      if (project.userId._id.toString() !== req.session.userId && req.session.role !== "admin") {
+      if (project.userId.toString() !== req.session.userId && req.session.role !== "admin") {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -403,7 +403,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/projects", requireAuth, requireAdmin, async (req, res) => {
     try {
       const projects = await storage.getAllProjects();
-      res.json(projects);
+      
+      // Add user information to each project for admin view
+      const projectsWithUserInfo = [];
+      for (const project of projects) {
+        const user = await storage.getUser(project.userId);
+        projectsWithUserInfo.push({
+          ...project,
+          userId: user ? {
+            _id: project.userId.toString(),
+            email: user.email || 'Unknown',
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            company: user.company || '',
+            role: user.role || 'user',
+            isActive: user.isActive || false,
+            createdAt: user.createdAt || ''
+          } : {
+            _id: project.userId.toString(),
+            email: 'Unknown',
+            firstName: '',
+            lastName: '',
+            company: '',
+            role: 'user',
+            isActive: false,
+            createdAt: ''
+          }
+        });
+      }
+      
+      res.json(projectsWithUserInfo);
     } catch (error) {
       console.error("Get all projects error:", error);
       res.status(500).json({ message: "Failed to get projects" });
@@ -419,17 +448,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Project not found' });
       }
       
-      // Send real-time notification to project owner
-      wsManager.sendProjectUpdate(id, project.userId.toString(), { 
-        title: project.title, 
-        status,
-        message: message || `Project status updated to ${status}`
-      });
+      // Get user info for notifications
+      const user = await storage.getUser(project.userId);
       
-      // Send email notification to project owner
-      if (emailService.isEmailServiceConfigured()) {
-        const user = await storage.getUserByEmail(project.userId.email);
-        if (user) {
+      // Send real-time notification to project owner
+      if (user) {
+        wsManager.sendProjectUpdate(id, project.userId.toString(), { 
+          title: project.title, 
+          status,
+          message: message || `Project status updated to ${status}`
+        });
+        
+        // Send email notification to project owner
+        if (emailService.isEmailServiceConfigured()) {
           await emailService.sendProjectStatusUpdate(user, project, status, message || `Your project status has been updated to ${status}`);
         }
       }

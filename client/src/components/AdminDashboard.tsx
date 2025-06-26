@@ -42,6 +42,13 @@ const AdminDashboard: React.FC = () => {
     if (currentUser?.role === 'admin') {
       fetchUsers();
       fetchProjects();
+      
+      // Set up polling to check for new projects every 5 seconds
+      const interval = setInterval(() => {
+        fetchUsers();
+        fetchProjects();
+      }, 5000);
+      return () => clearInterval(interval);
     }
   }, [currentUser]);
 
@@ -74,7 +81,7 @@ const AdminDashboard: React.FC = () => {
   const updateProjectStatus = async (projectId: string, status: string, updates: any = {}) => {
     try {
       const response = await fetch(`/api/admin/projects/${projectId}/status`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ status, ...updates }),
