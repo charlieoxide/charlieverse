@@ -2,9 +2,13 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import bcrypt from "bcrypt";
-import connectDB from "./database";
 import WebSocketManager from './websocket.js';
 import { upload, processImage, validateFile, getFileInfo, getFileCategory, type FileMetadata } from './fileUpload.js';
+import type { Request } from 'express';
+
+interface MulterRequest extends Request {
+  files?: Express.Multer.File[] | Express.Multer.File;
+}
 import { AnalyticsService } from './analytics.js';
 import emailService from './email.js';
 import path from 'path';
@@ -43,9 +47,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Initialize analytics service
   const analyticsService = new AnalyticsService(storage);
-
-  // Try to connect to PostgreSQL
-  const dbConnected = await connectDB();
   
   // Create default admin user
   setTimeout(async () => {
@@ -116,11 +117,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // If user exists, update the role if it's the admin email
         if (email === 'admin@charlieverse.com' && user.role !== 'admin') {
-          user = await storage.updateUser(user.id, { role: 'admin' });
+          const updatedUser = await storage.updateUser(user.id, { role: 'admin' });
+          if (updatedUser) user = updatedUser;
         }
         // Update Firebase UID if it's missing
         if (firebaseUid && !user.firebaseUid) {
-          user = await storage.updateUser(user.id, { firebaseUid });
+          const updatedUser = await storage.updateUser(user.id, { firebaseUid });
+          if (updatedUser) user = updatedUser;
         }
       }
 
@@ -136,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Admin user sync: ${email}, role: ${user.role}, session role: ${req.session.role}`);
       }
 
-      const { password, ...userWithoutPassword } = user;
+      const { password: _, ...userWithoutPassword } = user;
       res.json({ user: userWithoutPassword });
     } catch (error) {
       console.error('Firebase sync error:', error);
@@ -241,9 +244,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Set session
         req.session.userId = user.id.toString();
         req.session.userEmail = user.email;
-        req.session.firstName = user.firstName;
-        req.session.lastName = user.lastName;
-        req.session.role = user.role;
+        req.session.firstName = user.firstName || '';
+        req.session.lastName = user.lastName || '';
+        req.session.role = user.role || 'user';
         
         // Return user without password
         const { password: _, ...userWithoutPassword } = user;
